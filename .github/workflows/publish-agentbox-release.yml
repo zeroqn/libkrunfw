@@ -1,0 +1,158 @@
+name: Publish agentbox prebuilt binaries
+
+on:
+  push:
+    branches:
+      - agentbox
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agentbox-prebuilt-releases
+  cancel-in-progress: false
+
+env:
+  RELEASE_PREFIX: agentbox
+
+jobs:
+  build-x86_64:
+    name: Build x86_64 prebuilt package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev
+
+      - name: Build x86_64 package
+        run: |
+          set -euo pipefail
+          make
+          make PREFIX=tmp install
+          cd tmp
+          tar czf ../libkrunfw-x86_64.tgz lib64
+          cd ..
+          make clean
+        shell: bash
+
+      - name: Upload x86_64 workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libkrunfw-x86_64
+          path: libkrunfw-x86_64.tgz
+          if-no-files-found: error
+
+  build-aarch64:
+    name: Build aarch64 prebuilt package
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev
+
+      - name: Build aarch64 package
+        run: |
+          set -euo pipefail
+          make
+          make PREFIX=tmp install
+          cd tmp
+          tar czf ../libkrunfw-aarch64.tgz lib64
+          cd ..
+          make clean
+        shell: bash
+
+      - name: Upload aarch64 workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libkrunfw-aarch64
+          path: libkrunfw-aarch64.tgz
+          if-no-files-found: error
+
+  build-riscv64:
+    name: Build riscv64 prebuilt package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev gcc-riscv64-linux-gnu
+
+      - name: Build riscv64 package
+        run: |
+          set -euo pipefail
+          make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu-
+          make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- PREFIX=tmp install
+          cd tmp
+          tar czf ../libkrunfw-riscv64.tgz lib64
+          cd ..
+          make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- clean
+        shell: bash
+
+      - name: Upload riscv64 workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libkrunfw-riscv64
+          path: libkrunfw-riscv64.tgz
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish agentbox prerelease
+    runs-on: ubuntu-latest
+    needs:
+      - build-x86_64
+      - build-aarch64
+      - build-riscv64
+    steps:
+      - name: Download prebuilt artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: libkrunfw-*
+          path: dist
+          merge-multiple: true
+
+      - name: Create prerelease and upload assets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          short_sha="${GITHUB_SHA::12}"
+          tag_name="${RELEASE_PREFIX}-${short_sha}"
+
+          if gh release view "${tag_name}" >/dev/null 2>&1; then
+            gh release delete "${tag_name}" --yes --cleanup-tag
+          fi
+
+          gh release create "${tag_name}" \
+            --target "${GITHUB_SHA}" \
+            --title "agentbox ${short_sha}" \
+            --notes "Prebuilt libkrunfw artifacts for agentbox commit ${GITHUB_SHA}. Source is available from the release tag archive." \
+            --prerelease
+
+          gh release upload "${tag_name}" dist/*.tgz --clobber
+        shell: bash
+
+  prune-old-agentbox-releases:
+    name: Keep latest 10 agentbox prereleases
+    runs-on: ubuntu-latest
+    needs: publish-release
+    steps:
+      - name: Delete older agentbox releases and tags
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq 'sort_by(.createdAt) | reverse | map(select(.tagName | startswith("agentbox-"))) | .[10:][]?.tagName' |
+          while IFS= read -r tag_name; do
+            [ -n "${tag_name}" ] || continue
+            echo "Deleting old agentbox release ${tag_name}"
+            gh release delete "${tag_name}" --yes --cleanup-tag
+          done
+        shell: bash
