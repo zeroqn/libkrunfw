@@ -1,9 +1,13 @@
 KERNEL_VERSION = linux-6.12.87
 KERNEL_REMOTE = https://cdn.kernel.org/pub/linux/kernel/v6.x/$(KERNEL_VERSION).tar.xz
 KERNEL_TARBALL = tarballs/$(KERNEL_VERSION).tar.xz
+KERNEL_HARDENED_VERSION = v6.12.85-hardened1
+KERNEL_HARDENED_PATCH = tarballs/linux-hardened-$(KERNEL_HARDENED_VERSION).patch
+KERNEL_HARDENED_REMOTE = https://github.com/anthraxx/linux-hardened/releases/download/$(KERNEL_HARDENED_VERSION)/linux-hardened-$(KERNEL_HARDENED_VERSION).patch
 KERNEL_SOURCES = $(KERNEL_VERSION)
 KERNEL_PATCHES = $(shell find patches/ -name "0*.patch" | sort)
 KERNEL_C_BUNDLE = kernel.c
+CURL_FLAGS = -L --fail --retry 5 --retry-delay 2 --retry-all-errors
 
 ABI_VERSION = 5
 FULL_VERSION = 5.4.0
@@ -94,17 +98,23 @@ ifeq ($(TDX),1)
     INITRD_C_BUNDLE = initrd.c
 endif
 
+.DELETE_ON_ERROR:
 .PHONY: all install clean
 
 all: $(KRUNFW_BINARY_$(OS))
 
 $(KERNEL_TARBALL):
 	@mkdir -p tarballs
-	curl $(KERNEL_REMOTE) -o $(KERNEL_TARBALL)
+	curl $(CURL_FLAGS) $(KERNEL_REMOTE) -o $(KERNEL_TARBALL)
 
-$(KERNEL_SOURCES): $(KERNEL_TARBALL)
+$(KERNEL_HARDENED_PATCH):
+	@mkdir -p tarballs
+	curl $(CURL_FLAGS) $(KERNEL_HARDENED_REMOTE) -o $(KERNEL_HARDENED_PATCH)
+
+$(KERNEL_SOURCES): $(KERNEL_TARBALL) $(KERNEL_HARDENED_PATCH)
 	tar xf $(KERNEL_TARBALL)
 	for patch in $(KERNEL_PATCHES); do patch -p1 -d $(KERNEL_SOURCES) < "$$patch"; done
+	patch -p1 -d $(KERNEL_SOURCES) < $(KERNEL_HARDENED_PATCH)
 	cp config-libkrunfw$(VARIANT)_$(GUESTARCH) $(KERNEL_SOURCES)/.config
 	cd $(KERNEL_SOURCES) ; $(MAKE) olddefconfig
 
