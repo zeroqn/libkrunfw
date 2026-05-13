@@ -18,7 +18,7 @@ KERNEL_C_BUNDLE = kernel.c
 KRUNFW_BINARY = libkrunfw.so.$(FULL_VERSION)
 KRUNFW_SONAME = libkrunfw.so.$(ABI_VERSION)
 KRUNFW_BASE = libkrunfw.so
-LTO_TARBALL = libkrunfw-$(FULL_VERSION)-lto.tgz
+LTO_TARBALL = libkrunfw-x86_64-lto.tgz
 
 CLANG ?= clang
 STRIP ?= llvm-strip
