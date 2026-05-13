@@ -1,7 +1,7 @@
 KERNEL_VERSION = linux-6.12.87
 KERNEL_REMOTE = https://cdn.kernel.org/pub/linux/kernel/v6.x/$(KERNEL_VERSION).tar.xz
 KERNEL_TARBALL = tarballs/$(KERNEL_VERSION).tar.xz
-KERNEL_HARDENED_VERSION = v6.12.85-hardened1
+KERNEL_HARDENED_VERSION = v6.12.87-hardened1
 KERNEL_HARDENED_PATCH = tarballs/linux-hardened-$(KERNEL_HARDENED_VERSION).patch
 KERNEL_HARDENED_REMOTE = https://github.com/anthraxx/linux-hardened/releases/download/$(KERNEL_HARDENED_VERSION)/linux-hardened-$(KERNEL_HARDENED_VERSION).patch
 KERNEL_SOURCES = $(KERNEL_VERSION)
