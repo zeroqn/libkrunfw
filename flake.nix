@@ -20,12 +20,14 @@
           bc
           binutils
           bison
+          clang
           cpio
           curl
           elfutils
           file
           flex
           gawk
+          lld
           gcc
           gnumake
           gnugrep
@@ -34,6 +36,7 @@
           gzip
           ncurses
           openssl
+          llvm
           patch
           perl
           pkg-config
