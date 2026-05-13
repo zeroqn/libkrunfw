@@ -100,11 +100,16 @@ jobs:
           path: libkrunfw-riscv64.tgz
           if-no-files-found: error
 
+  build-x86_64-lto:
+    name: Build x86_64 LTO prebuilt package
+    uses: ./.github/workflows/build-x86_64-lto.yml
+
   publish-release:
     name: Publish agentbox prerelease
     runs-on: ubuntu-latest
     needs:
       - build-x86_64
+      - build-x86_64-lto
       - build-aarch64
       - build-riscv64
     steps:
