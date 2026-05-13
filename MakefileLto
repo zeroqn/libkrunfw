@@ -1,0 +1,76 @@
+KERNEL_VERSION = linux-6.12.85
+KERNEL_REMOTE = https://cdn.kernel.org/pub/linux/kernel/v6.x/$(KERNEL_VERSION).tar.xz
+KERNEL_TARBALL = tarballs/$(KERNEL_VERSION).tar.xz
+KERNEL_HARDENED_VERSION = v6.12.85-hardened1
+KERNEL_HARDENED_PATCH = tarballs/linux-hardened-$(KERNEL_HARDENED_VERSION).patch
+KERNEL_HARDENED_REMOTE = https://github.com/anthraxx/linux-hardened/releases/download/$(KERNEL_HARDENED_VERSION)/linux-hardened-$(KERNEL_HARDENED_VERSION).patch
+KERNEL_PATCHES = $(shell find patches/ -name "0*.patch" | sort)
+CURL_FLAGS = -L --fail --retry 5 --retry-delay 2 --retry-all-errors
+
+ABI_VERSION = 5
+FULL_VERSION = 5.3.0
+TIMESTAMP = "Tue Mar 10 13:28:56 CET 2026"
+
+KERNEL_SOURCES = $(KERNEL_VERSION)-lto
+KERNEL_CONFIG = config-libkrunfw_x86_64-lto
+KERNEL_BINARY = $(KERNEL_SOURCES)/vmlinux
+KERNEL_C_BUNDLE = kernel.c
+KRUNFW_BINARY = libkrunfw.so.$(FULL_VERSION)
+KRUNFW_SONAME = libkrunfw.so.$(ABI_VERSION)
+KRUNFW_BASE = libkrunfw.so
+LTO_TARBALL = libkrunfw-$(FULL_VERSION)-lto.tgz
+
+CLANG ?= clang
+STRIP ?= llvm-strip
+KERNEL_FLAGS = KBUILD_BUILD_TIMESTAMP=$(TIMESTAMP)
+KERNEL_FLAGS += KBUILD_BUILD_USER=root
+KERNEL_FLAGS += KBUILD_BUILD_HOST=libkrunfw
+KERNEL_FLAGS += LLVM=1 LLVM_IAS=1
+
+.DELETE_ON_ERROR:
+.PHONY: all lto package clean
+
+all: lto
+
+lto: $(KRUNFW_BASE)
+
+package: $(LTO_TARBALL)
+
+$(KERNEL_TARBALL):
+	@mkdir -p tarballs
+	curl $(CURL_FLAGS) $(KERNEL_REMOTE) -o $(KERNEL_TARBALL)
+
+$(KERNEL_HARDENED_PATCH):
+	@mkdir -p tarballs
+	curl $(CURL_FLAGS) $(KERNEL_HARDENED_REMOTE) -o $(KERNEL_HARDENED_PATCH)
+
+$(KERNEL_SOURCES): $(KERNEL_TARBALL) $(KERNEL_HARDENED_PATCH) $(KERNEL_CONFIG)
+	mkdir -p $(KERNEL_SOURCES)
+	tar xf $(KERNEL_TARBALL) -C $(KERNEL_SOURCES) --strip-components=1
+	for patch in $(KERNEL_PATCHES); do patch -p1 -d $(KERNEL_SOURCES) < "$$patch"; done
+	patch -p1 -d $(KERNEL_SOURCES) < $(KERNEL_HARDENED_PATCH)
+	cp $(KERNEL_CONFIG) $(KERNEL_SOURCES)/.config
+	cd $(KERNEL_SOURCES) ; $(MAKE) $(KERNEL_FLAGS) olddefconfig
+
+$(KERNEL_BINARY): $(KERNEL_SOURCES)
+	cd $(KERNEL_SOURCES) ; rm -f .version ; $(MAKE) $(MAKEFLAGS) $(KERNEL_FLAGS)
+
+$(KERNEL_C_BUNDLE): $(KERNEL_BINARY)
+	@echo "Generating $(KERNEL_C_BUNDLE) from $(KERNEL_BINARY)..."
+	@python3 bin2cbundle.py --os Linux -t vmlinux $(KERNEL_BINARY) $(KERNEL_C_BUNDLE)
+
+$(KRUNFW_BINARY): $(KERNEL_C_BUNDLE)
+	$(CLANG) -flto=thin -fuse-ld=lld -fPIC -DABI_VERSION=$(ABI_VERSION) -shared -Wl,-soname,$(KRUNFW_SONAME) -o $@ $(KERNEL_C_BUNDLE)
+	$(STRIP) $(KRUNFW_BINARY)
+
+$(KRUNFW_SONAME): $(KRUNFW_BINARY)
+	ln -sf $(KRUNFW_BINARY) $(KRUNFW_SONAME)
+
+$(KRUNFW_BASE): $(KRUNFW_SONAME)
+	ln -sf $(KRUNFW_SONAME) $(KRUNFW_BASE)
+
+$(LTO_TARBALL): $(KRUNFW_BASE)
+	tar czf $(LTO_TARBALL) $(KRUNFW_BINARY) $(KRUNFW_SONAME) $(KRUNFW_BASE)
+
+clean:
+	rm -fr $(KERNEL_SOURCES) $(KERNEL_C_BUNDLE) $(KRUNFW_BINARY) $(KRUNFW_SONAME) $(KRUNFW_BASE) $(LTO_TARBALL)
