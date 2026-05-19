@@ -365,9 +365,9 @@ index 70eee056871c..b3ee9ce90b5d 100644
 +	return skb;
 +}
 +
- static void virtio_transport_copy_nonlinear_skb(const struct sk_buff *skb,
- 						void *dst,
- 						size_t len)
+ /* Packet capture */
+ static struct sk_buff *virtio_transport_build_skb(void *opaque)
+ {
 @@ -242,7 +271,9 @@ EXPORT_SYMBOL_GPL(virtio_transport_deliver_tap_pkt);
  
  static u16 virtio_transport_get_type(struct sock *sk)
@@ -447,7 +447,7 @@ index 70eee056871c..b3ee9ce90b5d 100644
  int virtio_transport_connect(struct vsock_sock *vsk)
  {
  	struct virtio_vsock_pkt_info info = {
-@@ -1118,7 +1141,33 @@ virtio_transport_dgram_enqueue(struct vsock_sock *vsk,
+@@ -1118,7 +1141,32 @@ virtio_transport_dgram_enqueue(struct vsock_sock *vsk,
  			       struct msghdr *msg,
  			       size_t dgram_len)
  {
@@ -461,7 +461,6 @@ index 70eee056871c..b3ee9ce90b5d 100644
 +	};
 +	u32 src_cid, src_port;
 +	struct sk_buff *skb;
-+	int err;
 +
 +	if (dgram_len > VIRTIO_VSOCK_MAX_PKT_BUF_SIZE)
 +		return -EMSGSIZE;
@@ -482,14 +481,6 @@ index 70eee056871c..b3ee9ce90b5d 100644
  }
  EXPORT_SYMBOL_GPL(virtio_transport_dgram_enqueue);
  
-@@ -1191,6 +1240,7 @@ static int virtio_transport_reset_no_sock(const struct virtio_transport *t,
- 		.reply = true,
- 	};
- 	struct sk_buff *reply;
-+	int err;
- 
- 	/* Send RST only if the original pkt is not a RST pkt */
- 	if (le16_to_cpu(hdr->op) == VIRTIO_VSOCK_OP_RST)
 @@ -1205,7 +1255,7 @@ static int virtio_transport_reset_no_sock(const struct virtio_transport *t,
  					   le64_to_cpu(hdr->src_cid),
  					   le32_to_cpu(hdr->src_port));
