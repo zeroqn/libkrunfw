@@ -20,6 +20,10 @@ KRUNFW_SONAME = libkrunfw.so.$(ABI_VERSION)
 KRUNFW_BASE = libkrunfw.so
 LTO_TARBALL = libkrunfw-x86_64-lto.tgz
 
+KVM_LTO_KERNEL_SOURCES = $(KERNEL_VERSION)-kvm-lto
+KVM_LTO_KERNEL_CONFIG = config-libkrunfw_x86_64-kvm-lto
+KVM_LTO_TARBALL = libkrunfw-x86_64-kvm-lto.tgz
+
 CLANG ?= clang
 STRIP ?= llvm-strip
 KERNEL_FLAGS = KBUILD_BUILD_TIMESTAMP=$(TIMESTAMP)
@@ -28,13 +32,19 @@ KERNEL_FLAGS += KBUILD_BUILD_HOST=libkrunfw
 KERNEL_FLAGS += LLVM=1 LLVM_IAS=1
 
 .DELETE_ON_ERROR:
-.PHONY: all lto package clean
+.PHONY: all lto kvm-lto package clean-build-output clean
 
 all: lto
 
 lto: $(KRUNFW_BASE)
 
+kvm-lto:
+	$(MAKE) clean-build-output
+	$(MAKE) KERNEL_SOURCES=$(KVM_LTO_KERNEL_SOURCES) KERNEL_CONFIG=$(KVM_LTO_KERNEL_CONFIG) $(KRUNFW_BASE)
+
 package: $(LTO_TARBALL)
+	$(MAKE) clean-build-output
+	$(MAKE) KERNEL_SOURCES=$(KVM_LTO_KERNEL_SOURCES) KERNEL_CONFIG=$(KVM_LTO_KERNEL_CONFIG) LTO_TARBALL=$(KVM_LTO_TARBALL) $(KVM_LTO_TARBALL)
 
 $(KERNEL_TARBALL):
 	@mkdir -p tarballs
@@ -72,5 +82,16 @@ $(KRUNFW_BASE): $(KRUNFW_SONAME)
 $(LTO_TARBALL): $(KRUNFW_BASE)
 	tar czf $(LTO_TARBALL) $(KRUNFW_BINARY) $(KRUNFW_SONAME) $(KRUNFW_BASE)
 
-clean:
-	rm -fr $(KERNEL_SOURCES) $(KERNEL_C_BUNDLE) $(KRUNFW_BINARY) $(KRUNFW_SONAME) $(KRUNFW_BASE) $(LTO_TARBALL)
+clean-build-output:
+	rm -fr \
+		$(KERNEL_C_BUNDLE) \
+		$(KRUNFW_BINARY) \
+		$(KRUNFW_SONAME) \
+		$(KRUNFW_BASE)
+
+clean: clean-build-output
+	rm -fr \
+		$(KERNEL_SOURCES) \
+		$(KVM_LTO_KERNEL_SOURCES) \
+		$(LTO_TARBALL) \
+		$(KVM_LTO_TARBALL)
