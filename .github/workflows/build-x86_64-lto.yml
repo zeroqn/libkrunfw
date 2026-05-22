@@ -1,4 +1,4 @@
-name: Build x86_64 LTO kernel
+name: Build x86_64 LTO kernels
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     if: github.event_name != 'create'
-    name: Build x86_64 LTO kernel
+    name: Build x86_64 LTO kernels
     runs-on: ubuntu-latest
     steps:
       - name: Code checkout
@@ -17,12 +17,19 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc clang lld llvm bc bison flex elfutils python3-pyelftools curl patch libelf-dev
 
-      - name: Build x86_64 LTO package
+      - name: Build x86_64 LTO packages
         run: make -f MakefileLto package
 
       - name: Upload x86_64 LTO workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: libkrunfw-x86_64-lto
-          path: libkrunfw-*-lto.tgz
+          path: libkrunfw-x86_64-lto.tgz
+          if-no-files-found: error
+
+      - name: Upload x86_64 KVM LTO workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libkrunfw-x86_64-kvm-lto
+          path: libkrunfw-x86_64-kvm-lto.tgz
           if-no-files-found: error
