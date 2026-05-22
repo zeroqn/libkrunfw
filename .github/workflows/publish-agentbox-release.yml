@@ -101,7 +101,7 @@ jobs:
           if-no-files-found: error
 
   build-x86_64-lto:
-    name: Build x86_64 LTO prebuilt package
+    name: Build x86_64 LTO prebuilt packages
     uses: ./.github/workflows/build-x86_64-lto.yml
 
   publish-release:
