@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev
 
+      - name: Set up sccache
+        uses: ./.github/actions/setup-sccache
+
       - name: Build x86_64 package
         run: |
           set -euo pipefail
@@ -36,6 +39,10 @@ jobs:
           cd ..
           make clean
         shell: bash
+
+      - name: Show sccache stats
+        if: always()
+        run: ${SCCACHE_PATH:-sccache} --show-stats
 
       - name: Upload x86_64 workflow artifact
         uses: actions/upload-artifact@v4
@@ -54,6 +61,9 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev
 
+      - name: Set up sccache
+        uses: ./.github/actions/setup-sccache
+
       - name: Build aarch64 package
         run: |
           set -euo pipefail
@@ -64,6 +74,10 @@ jobs:
           cd ..
           make clean
         shell: bash
+
+      - name: Show sccache stats
+        if: always()
+        run: ${SCCACHE_PATH:-sccache} --show-stats
 
       - name: Upload aarch64 workflow artifact
         uses: actions/upload-artifact@v4
@@ -82,6 +96,9 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev gcc-riscv64-linux-gnu
 
+      - name: Set up sccache
+        uses: ./.github/actions/setup-sccache
+
       - name: Build riscv64 package
         run: |
           set -euo pipefail
@@ -92,6 +109,10 @@ jobs:
           cd ..
           make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- clean
         shell: bash
+
+      - name: Show sccache stats
+        if: always()
+        run: ${SCCACHE_PATH:-sccache} --show-stats
 
       - name: Upload riscv64 workflow artifact
         uses: actions/upload-artifact@v4
