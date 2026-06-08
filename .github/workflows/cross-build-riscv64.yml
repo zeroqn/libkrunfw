@@ -13,5 +13,12 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev gcc-riscv64-linux-gnu
 
+      - name: Set up sccache
+        uses: ./.github/actions/setup-sccache
+
       - name: Build riscv64 kernel
         run: make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu-
+
+      - name: Show sccache stats
+        if: always()
+        run: ${SCCACHE_PATH:-sccache} --show-stats

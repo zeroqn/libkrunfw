@@ -1,0 +1,25 @@
+name: Set up sccache
+description: Install sccache and add compiler wrappers ahead of system compilers.
+runs:
+  using: composite
+  steps:
+    - name: Set up sccache
+      uses: mozilla-actions/sccache-action@v0.0.10
+
+    - name: Add sccache compiler wrappers
+      shell: bash
+      run: |
+        set -euo pipefail
+        wrapper_dir="${RUNNER_TEMP}/sccache-wrappers"
+        mkdir -p "${wrapper_dir}"
+        for compiler in cc gcc clang riscv64-linux-gnu-gcc; do
+          if real_compiler="$(command -v "${compiler}")"; then
+            cat > "${wrapper_dir}/${compiler}" <<EOF
+        #!/usr/bin/env bash
+        exec "${SCCACHE_PATH}" "${real_compiler}" "\$@"
+        EOF
+            chmod +x "${wrapper_dir}/${compiler}"
+          fi
+        done
+        echo "${wrapper_dir}" >> "${GITHUB_PATH}"
+        echo "SCCACHE_GHA_ENABLED=true" >> "${GITHUB_ENV}"

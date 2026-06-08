@@ -16,6 +16,9 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu
 
+      - name: Set up sccache
+        uses: ./.github/actions/setup-sccache
+
       - name: Build x86_64 package
         run: |
           make
@@ -30,6 +33,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
 
+      - name: Show sccache stats
+        if: always()
+        run: ${SCCACHE_PATH:-sccache} --show-stats
+
   build-aarch64:
     name: Build package for aarch64
     runs-on: ubuntu-24.04-arm
@@ -39,6 +46,9 @@ jobs:
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev
+
+      - name: Set up sccache
+        uses: ./.github/actions/setup-sccache
 
       - name: Build aarch64 package
         run: |
@@ -59,6 +69,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
 
+      - name: Show sccache stats
+        if: always()
+        run: ${SCCACHE_PATH:-sccache} --show-stats
+
   build-riscv64:
     name: Build package for riscv64
     runs-on: ubuntu-latest
@@ -68,6 +82,9 @@ jobs:
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev gcc-riscv64-linux-gnu
+
+      - name: Set up sccache
+        uses: ./.github/actions/setup-sccache
 
       - name: Build riscv64 package
         run: |
@@ -82,3 +99,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
+
+      - name: Show sccache stats
+        if: always()
+        run: ${SCCACHE_PATH:-sccache} --show-stats
