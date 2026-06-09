@@ -13,12 +13,12 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev
 
-      - name: Set up sccache
-        uses: ./.github/actions/setup-sccache
+      - name: Set up ccache
+        uses: ./.github/actions/setup-ccache
 
       - name: Build aarch64 kernel
         run: make
 
-      - name: Show sccache stats
+      - name: Show ccache stats
         if: always()
-        run: ${SCCACHE_PATH:-sccache} --show-stats
+        run: ccache -s

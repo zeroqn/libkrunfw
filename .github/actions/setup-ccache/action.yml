@@ -1,0 +1,48 @@
+name: Set up ccache
+description: Install ccache, restore its cache, and add compiler wrappers ahead of system compilers.
+runs:
+  using: composite
+  steps:
+    - name: Install ccache
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v ccache >/dev/null 2>&1; then
+          sudo apt-get update
+          sudo apt-get install -y ccache
+        fi
+
+    - name: Configure ccache environment
+      shell: bash
+      run: |
+        set -euo pipefail
+        ccache_dir="${GITHUB_WORKSPACE}/.ccache"
+        mkdir -p "${ccache_dir}"
+        {
+          echo "CCACHE_DIR=${ccache_dir}"
+          echo "CCACHE_BASEDIR=${GITHUB_WORKSPACE}"
+          echo "CCACHE_COMPILERCHECK=content"
+        } >> "${GITHUB_ENV}"
+
+    - name: Restore ccache cache
+      uses: actions/cache@v4
+      with:
+        path: "${{ github.workspace }}/.ccache"
+        key: "ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('Makefile', 'config-libkrunfw*') }}"
+        restore-keys: |
+          ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
+
+    - name: Add ccache compiler wrappers
+      shell: bash
+      run: |
+        set -euo pipefail
+        wrapper_dir="${RUNNER_TEMP}/ccache-wrappers"
+        mkdir -p "${wrapper_dir}"
+        for compiler in cc gcc clang riscv64-linux-gnu-gcc; do
+          if real_compiler="$(command -v "${compiler}")"; then
+            printf '%s\n' '#!/usr/bin/env bash' "exec ccache ${real_compiler@Q} \"\$@\"" > "${wrapper_dir}/${compiler}"
+            chmod +x "${wrapper_dir}/${compiler}"
+          fi
+        done
+        echo "${wrapper_dir}" >> "${GITHUB_PATH}"
+        ccache --zero-stats
