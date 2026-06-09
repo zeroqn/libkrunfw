@@ -16,8 +16,8 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev gcc-aarch64-linux-gnu gcc-riscv64-linux-gnu
 
-      - name: Set up sccache
-        uses: ./.github/actions/setup-sccache
+      - name: Set up ccache
+        uses: ./.github/actions/setup-ccache
 
       - name: Build x86_64 package
         run: |
@@ -33,9 +33,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
 
-      - name: Show sccache stats
+      - name: Show ccache stats
         if: always()
-        run: ${SCCACHE_PATH:-sccache} --show-stats
+        run: ccache -s
 
   build-aarch64:
     name: Build package for aarch64
@@ -47,8 +47,8 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev
 
-      - name: Set up sccache
-        uses: ./.github/actions/setup-sccache
+      - name: Set up ccache
+        uses: ./.github/actions/setup-ccache
 
       - name: Build aarch64 package
         run: |
@@ -69,9 +69,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
 
-      - name: Show sccache stats
+      - name: Show ccache stats
         if: always()
-        run: ${SCCACHE_PATH:-sccache} --show-stats
+        run: ccache -s
 
   build-riscv64:
     name: Build package for riscv64
@@ -83,8 +83,8 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev gcc-riscv64-linux-gnu
 
-      - name: Set up sccache
-        uses: ./.github/actions/setup-sccache
+      - name: Set up ccache
+        uses: ./.github/actions/setup-ccache
 
       - name: Build riscv64 package
         run: |
@@ -100,6 +100,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
 
-      - name: Show sccache stats
+      - name: Show ccache stats
         if: always()
-        run: ${SCCACHE_PATH:-sccache} --show-stats
+        run: ccache -s
