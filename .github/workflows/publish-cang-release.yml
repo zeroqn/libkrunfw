@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           make
-          make PREFIX=tmp install
+          make PREFIX=tmp LIBDIR_Linux=lib64 install
           cd tmp
           tar czf ../libkrunfw-x86_64.tgz lib64
           cd ..
@@ -68,7 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           make
-          make PREFIX=tmp install
+          make PREFIX=tmp LIBDIR_Linux=lib64 install
           cd tmp
           tar czf ../libkrunfw-aarch64.tgz lib64
           cd ..
@@ -103,7 +103,7 @@ jobs:
         run: |
           set -euo pipefail
           make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu-
-          make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- PREFIX=tmp install
+          make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- PREFIX=tmp LIBDIR_Linux=lib64 install
           cd tmp
           tar czf ../libkrunfw-riscv64.tgz lib64
           cd ..
