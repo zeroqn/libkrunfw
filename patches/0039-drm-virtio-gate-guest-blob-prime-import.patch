@@ -1,0 +1,70 @@
+From 94eefb13fa389d3db8ded8aad08f3d8355dc3138 Mon Sep 17 00:00:00 2001
+From: cang fork <cang@localhost>
+Date: Mon, 28 Sep 2026 23:15:20 +0800
+Subject: [PATCH 39/39] drm/virtio: gate the guest-blob PRIME import on the negotiated bits
+ blobs, never deref a NULL fpriv
+
+Fork-authored, not upstream.  `df4dc947c46b` unlocked the PRIME import for
+every 3D guest and was reverted (1e3b08de6327) because it broke vrend; this
+authors the conditional form Val described on 2026-09-15, and forward-ports the
+virtio-comment v3 intent that CREATE_GUEST_HANDLE requires BLOB_CTX_ID_FIX:
+the guest-blob path, the flag stamp and the ctx_id are all taken only when
+both bits were negotiated, and a NULL prime_import_file_priv no longer
+dereferences.
+
+---
+ drivers/gpu/drm/virtio/virtgpu_prime.c | 21 +++++++++++++++++----
+ 1 file changed, 17 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_prime.c b/drivers/gpu/drm/virtio/virtgpu_prime.c
+index 9e0ba175d..528dd1f06 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_prime.c
++++ b/drivers/gpu/drm/virtio/virtgpu_prime.c
+@@ -216,7 +216,7 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
+ 	struct virtio_gpu_device *vgdev = dev->dev_private;
+ 	struct virtio_gpu_object_params params = { 0 };
+ 	struct dma_resv *resv = attach->dmabuf->resv;
+-	struct virtio_gpu_fpriv *vfpriv = vgdev->prime_import_file_priv->driver_priv;
++	struct virtio_gpu_fpriv *vfpriv = NULL;
+ 	struct virtio_gpu_mem_entry *ents = NULL;
+ 	unsigned int nents;
+ 	int ret;
+@@ -237,11 +237,14 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
+ 	if (ret)
+ 		goto err_import;
+ 
+-	params.ctx_id = vfpriv->ctx_id;
++	if (vgdev->has_blob_ctx_id_fix && vgdev->prime_import_file_priv)
++		vfpriv = vgdev->prime_import_file_priv->driver_priv;
++	if (vfpriv)
++		params.ctx_id = vfpriv->ctx_id;
+ 	params.blob = true;
+ 	params.blob_mem = VIRTGPU_BLOB_MEM_GUEST;
+ 	params.blob_flags = VIRTGPU_BLOB_FLAG_USE_SHAREABLE;
+-	if (vgdev->has_create_guest_handle)
++	if (vgdev->has_create_guest_handle && vgdev->has_blob_ctx_id_fix)
+ 		/* No way for userspace to decide with this API, but most existing
+ 		 * use cases do require shareable handles on the host side */
+ 		params.blob_flags |= VIRTGPU_BLOB_FLAG_CREATE_GUEST_HANDLE;
+@@ -323,7 +326,17 @@ struct drm_gem_object *virtgpu_gem_prime_import(struct drm_device *dev,
+ 		}
+ 	}
+ 
+-	if (!vgdev->has_resource_blob || vgdev->has_virgl_3d)
++	/*
++	 * Importing a dma-buf as a guest blob is only useful when the host can
++	 * give it a shareable handle, and only safe when the VMM accepts a
++	 * ctx_id for guest blobs (Virtio GPU spec 1.4: CREATE_GUEST_HANDLE
++	 * requires BLOB_CTX_ID_FIX). Without both, keep the old KMS-only
++	 * compatibility path - taking the guest-blob path with 3D enabled
++	 * broke vrend for buffers that are not blob-compatible.
++	 */
++	if (!vgdev->has_resource_blob ||
++	    (vgdev->has_virgl_3d &&
++	     !(vgdev->has_create_guest_handle && vgdev->has_blob_ctx_id_fix)))
+ 		return drm_gem_prime_import(dev, buf);
+ 
+ 	bo = kzalloc(sizeof(*bo), GFP_KERNEL);
+-- 
+2.54.0
+
