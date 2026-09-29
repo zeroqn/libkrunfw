@@ -1,9 +1,7 @@
-From 9be49fb32b4aeb6e45f214f6443b9cf083d4910b Mon Sep 17 00:00:00 2001
-From: Brian Daniels <briandaniels@google.com>
-Date: Tue, 8 Sep 2026 10:44:39 +0200
-Subject: [PATCH 32/36] media: virtio: Add session management
-
+From 1a3f4043e4213ffe483f47ab94a934e9112f6548 Mon Sep 17 00:00:00 2001
 From: Alexandre Courbot <gnurou@gmail.com>
+Date: Tue, 8 Sep 2026 10:44:39 +0200
+Subject: [PATCH 13/23] media: virtio: Add session management
 
 This patch adds session management to the virtio-media driver.
 A session is created when the /dev/videoX device is opened, and
@@ -27,7 +25,7 @@ Signed-off-by: Brian Daniels <briandaniels@google.com>
 
 diff --git a/drivers/media/virtio/session.h b/drivers/media/virtio/session.h
 new file mode 100644
-index 000000000000..1b3b2c279055
+index 000000000..1b3b2c279
 --- /dev/null
 +++ b/drivers/media/virtio/session.h
 @@ -0,0 +1,132 @@
@@ -164,7 +162,7 @@ index 000000000000..1b3b2c279055
 +
 +#endif // __VIRTIO_MEDIA_SESSION_H
 diff --git a/drivers/media/virtio/virtio_media_driver.c b/drivers/media/virtio/virtio_media_driver.c
-index 25f2ceaa6c48..ef8065e34492 100644
+index 25f2ceaa6..ef8065e34 100644
 --- a/drivers/media/virtio/virtio_media_driver.c
 +++ b/drivers/media/virtio/virtio_media_driver.c
 @@ -14,25 +14,589 @@
@@ -836,6 +834,3 @@ index 25f2ceaa6c48..ef8065e34492 100644
  }
  
  static struct virtio_device_id id_table[] = {
--- 
-2.55.0
-

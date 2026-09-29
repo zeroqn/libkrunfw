@@ -1,0 +1,36 @@
+From a8188c1a8c855aae1bf9cf902175e992a61657f4 Mon Sep 17 00:00:00 2001
+From: Val Packett <val@invisiblethingslab.com>
+Date: Mon, 28 Sep 2026 23:14:12 +0800
+Subject: [PATCH 20/23] drm/virtio: support CREATE_GUEST_HANDLE and
+ BLOB_CTX_ID_FIX (9/BLOB_ALIGNMENT deliberately skipped)
+
+---
+ drivers/gpu/drm/virtio/virtgpu_ioctl.c | 2 ++
+ include/uapi/drm/virtgpu_drm.h         | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_ioctl.c b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
+index 5b8f8179a..11e906212 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_ioctl.c
++++ b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
+@@ -122,6 +122,8 @@ static int virtio_gpu_getparam_ioctl(struct drm_device *dev, void *data,
+ 		if (!vgdev->has_blob_alignment)
+ 			return -ENOENT;
+ 		value = vgdev->blob_alignment;
++	case VIRTGPU_PARAM_CREATE_GUEST_HANDLE:
++		value = vgdev->has_create_guest_handle ? 1 : 0;
+ 		break;
+ 	default:
+ 		return -EINVAL;
+diff --git a/include/uapi/drm/virtgpu_drm.h b/include/uapi/drm/virtgpu_drm.h
+index a39cdc205..893ba8b48 100644
+--- a/include/uapi/drm/virtgpu_drm.h
++++ b/include/uapi/drm/virtgpu_drm.h
+@@ -101,6 +101,7 @@ struct drm_virtgpu_execbuffer {
+ #define VIRTGPU_PARAM_SUPPORTED_CAPSET_IDs 7 /* Bitmask of supported capability set ids */
+ #define VIRTGPU_PARAM_EXPLICIT_DEBUG_NAME 8 /* Ability to set debug name from userspace */
+ #define VIRTGPU_PARAM_BLOB_ALIGNMENT 9 /* Device alignment requirements for blobs */
++#define VIRTGPU_PARAM_CREATE_GUEST_HANDLE 10 /* Host handles for guest blob resources */
+ 
+ struct drm_virtgpu_getparam {
+ 	__u64 param;

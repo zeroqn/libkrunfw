@@ -1,7 +1,7 @@
-From 62efc5665240814f15f351cb37c29264e6e8d2f6 Mon Sep 17 00:00:00 2001
+From d51d7758f0762f1fcceb42e4a2d5a53ea8603cef Mon Sep 17 00:00:00 2001
 From: Sergio Lopez <slp@redhat.com>
 Date: Tue, 8 Oct 2024 11:24:25 +0200
-Subject: [PATCH 19/36] Enable 64 bit processes to use compat input syscalls
+Subject: [PATCH 08/23] Enable 64 bit processes to use compat input syscalls
 
 The compat variant of input syscalls is only enabled for 32 bit
 tasks, but in some cases, such as userspace emulation, it's useful to
@@ -20,10 +20,10 @@ Signed-off-by: Sergio Lopez <slp@redhat.com>
  5 files changed, 29 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/input/input-compat.c b/drivers/input/input-compat.c
-index 2ccd3eedbd67..abb8cfb99d6c 100644
+index a5043193e..a3c0c7012 100644
 --- a/drivers/input/input-compat.c
 +++ b/drivers/input/input-compat.c
-@@ -14,7 +14,7 @@
+@@ -15,7 +15,7 @@
  int input_event_from_user(const char __user *buffer,
  			  struct input_event *event)
  {
@@ -32,7 +32,7 @@ index 2ccd3eedbd67..abb8cfb99d6c 100644
  		struct input_event_compat compat_event;
  
  		if (copy_from_user(&compat_event, buffer,
-@@ -38,7 +38,7 @@ int input_event_from_user(const char __user *buffer,
+@@ -39,7 +39,7 @@ int input_event_from_user(const char __user *buffer,
  int input_event_to_user(char __user *buffer,
  			const struct input_event *event)
  {
@@ -41,7 +41,7 @@ index 2ccd3eedbd67..abb8cfb99d6c 100644
  		struct input_event_compat compat_event;
  
  		compat_event.sec = event->input_event_sec;
-@@ -62,7 +62,7 @@ int input_event_to_user(char __user *buffer,
+@@ -63,7 +63,7 @@ int input_event_to_user(char __user *buffer,
  int input_ff_effect_from_user(const char __user *buffer, size_t size,
  			      struct ff_effect *effect)
  {
@@ -51,7 +51,7 @@ index 2ccd3eedbd67..abb8cfb99d6c 100644
  
  		if (size != sizeof(struct ff_effect_compat))
 diff --git a/drivers/input/input-compat.h b/drivers/input/input-compat.h
-index 3b7bb12b023b..e78c0492ce0d 100644
+index 99c87ceb9..e0e078306 100644
 --- a/drivers/input/input-compat.h
 +++ b/drivers/input/input-compat.h
 @@ -53,7 +53,7 @@ struct ff_effect_compat {
@@ -64,10 +64,10 @@ index 3b7bb12b023b..e78c0492ce0d 100644
  }
  
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 7b97f1ec1bc0..7d866d29db81 100644
+index 9341d647b..329f235d3 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1613,6 +1613,11 @@ struct task_struct {
+@@ -1662,6 +1662,11 @@ struct task_struct {
  #ifdef CONFIG_USER_EVENTS
  	struct user_event_mm		*user_event_mm;
  #endif
@@ -77,13 +77,13 @@ index 7b97f1ec1bc0..7d866d29db81 100644
 +	 */
 +	bool compat_input;
  
- 	/*
- 	 * New fields for task_struct should be added above here, so that
+ #ifdef CONFIG_UNWIND_USER
+ 	struct unwind_task_info		unwind_info;
 diff --git a/include/uapi/linux/prctl.h b/include/uapi/linux/prctl.h
-index 36c278683cd6..c2027aa99409 100644
+index 272248591..2cd48a280 100644
 --- a/include/uapi/linux/prctl.h
 +++ b/include/uapi/linux/prctl.h
-@@ -333,4 +333,9 @@ struct prctl_mm_map {
+@@ -421,4 +421,9 @@ struct prctl_mm_map {
  # define PR_SET_MEM_MODEL_DEFAULT	0
  # define PR_SET_MEM_MODEL_TSO		1
  
@@ -94,10 +94,10 @@ index 36c278683cd6..c2027aa99409 100644
 +
  #endif /* _LINUX_PRCTL_H */
 diff --git a/kernel/sys.c b/kernel/sys.c
-index b14846a80169..f98671f25026 100644
+index 6533fd5ed..4a596d404 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
-@@ -2818,6 +2818,21 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
+@@ -2928,6 +2928,21 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
  			return -EINVAL;
  		error = arch_prctl_mem_model_set(me, arg2);
  		break;
@@ -117,8 +117,5 @@ index b14846a80169..f98671f25026 100644
 +			return -EINVAL;
 +		break;
  	default:
+ 		trace_task_prctl_unknown(option, arg2, arg3, arg4, arg5);
  		error = -EINVAL;
- 		break;
--- 
-2.55.0
-

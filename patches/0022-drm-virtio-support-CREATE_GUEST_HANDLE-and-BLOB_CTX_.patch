@@ -1,0 +1,85 @@
+From cf55514932cc52df859a1aad894132fcd9a4a7ab Mon Sep 17 00:00:00 2001
+From: Val Packett <val@invisiblethingslab.com>
+Date: Mon, 28 Sep 2026 23:15:11 +0800
+Subject: [PATCH 22/23] drm/virtio: support CREATE_GUEST_HANDLE and
+ BLOB_CTX_ID_FIX
+
+---
+ drivers/gpu/drm/virtio/virtgpu_drv.c   |  1 +
+ drivers/gpu/drm/virtio/virtgpu_drv.h   |  6 ++++++
+ drivers/gpu/drm/virtio/virtgpu_prime.c | 12 ++++++++++++
+ 3 files changed, 19 insertions(+)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_drv.c b/drivers/gpu/drm/virtio/virtgpu_drv.c
+index 7b1d1ce84..180d540d8 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_drv.c
++++ b/drivers/gpu/drm/virtio/virtgpu_drv.c
+@@ -252,6 +252,7 @@ static const struct drm_driver driver = {
+ #if defined(CONFIG_DEBUG_FS)
+ 	.debugfs_init = virtio_gpu_debugfs_init,
+ #endif
++	.prime_fd_to_handle = virtgpu_prime_fd_to_handle,
+ 	.gem_prime_import = virtgpu_gem_prime_import,
+ 	.gem_prime_import_sg_table = virtgpu_gem_prime_import_sg_table,
+ 
+diff --git a/drivers/gpu/drm/virtio/virtgpu_drv.h b/drivers/gpu/drm/virtio/virtgpu_drv.h
+index 559c701b1..bd84ef44b 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_drv.h
++++ b/drivers/gpu/drm/virtio/virtgpu_drv.h
+@@ -298,6 +298,9 @@ struct virtio_gpu_device {
+ 	struct list_head cap_cache;
+ 	uint32_t blob_alignment;
+ 
++	struct mutex prime_import_lock;
++	struct drm_file *prime_import_file_priv;
++
+ 	/* protects uuid state when exporting */
+ 	spinlock_t resource_export_lock;
+ 	/* protects map state and host_visible_mm */
+@@ -518,6 +521,9 @@ int virtio_gpu_resource_assign_uuid(struct virtio_gpu_device *vgdev,
+ 				    struct virtio_gpu_object *bo);
+ struct dma_buf *virtgpu_gem_prime_export(struct drm_gem_object *obj,
+ 					 int flags);
++int virtgpu_prime_fd_to_handle(struct drm_device *dev,
++			   struct drm_file *file_priv,
++			   int fd, u32 *handle);
+ struct drm_gem_object *virtgpu_gem_prime_import(struct drm_device *dev,
+ 						struct dma_buf *buf);
+ struct drm_gem_object *virtgpu_gem_prime_import_sg_table(
+diff --git a/drivers/gpu/drm/virtio/virtgpu_prime.c b/drivers/gpu/drm/virtio/virtgpu_prime.c
+index 5191f6cfa..4a68bee5f 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_prime.c
++++ b/drivers/gpu/drm/virtio/virtgpu_prime.c
+@@ -230,6 +230,7 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
+ 	struct virtio_gpu_device *vgdev = dev->dev_private;
+ 	struct virtio_gpu_object_params params = { 0 };
+ 	struct dma_resv *resv = attach->dmabuf->resv;
++	struct virtio_gpu_fpriv *vfpriv = vgdev->prime_import_file_priv->driver_priv;
+ 	struct virtio_gpu_mem_entry *ents = NULL;
+ 	unsigned int nents;
+ 	int ret;
+@@ -250,6 +251,7 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
+ 	if (ret)
+ 		goto err_import;
+ 
++	params.ctx_id = vfpriv->ctx_id;
+ 	params.blob = true;
+ 	params.blob_mem = VIRTGPU_BLOB_MEM_GUEST;
+ 	params.blob_flags = VIRTGPU_BLOB_FLAG_USE_SHAREABLE;
+@@ -295,6 +297,16 @@ static const struct dma_buf_attach_ops virtgpu_dma_buf_attach_ops = {
+ 	.invalidate_mappings = virtgpu_dma_buf_move_notify
+ };
+ 
++int virtgpu_prime_fd_to_handle(struct drm_device *dev,
++			   struct drm_file *file_priv,
++			   int fd, u32 *handle)
++{
++	struct virtio_gpu_device *vgdev = dev->dev_private;
++	guard(mutex)(&vgdev->prime_import_lock);
++	vgdev->prime_import_file_priv = file_priv;
++	return drm_gem_prime_fd_to_handle(dev, file_priv, fd, handle);
++}
++
+ struct drm_gem_object *virtgpu_gem_prime_import(struct drm_device *dev,
+ 						struct dma_buf *buf)
+ {
