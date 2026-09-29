@@ -1,7 +1,7 @@
-From 3c2901379d8789be51b75a04fb99ded75d988667 Mon Sep 17 00:00:00 2001
+From 65c66f21cc03632d004fd25f97bd8e43f70ee37a Mon Sep 17 00:00:00 2001
 From: Sergio Lopez <slp@redhat.com>
 Date: Thu, 19 May 2022 22:38:26 +0200
-Subject: [PATCH 11/36] Transparent Socket Impersonation implementation
+Subject: [PATCH 04/23] Transparent Socket Impersonation implementation
 
 Transparent Socket Impersonation (AF_TSI) is an address family that
 provides sockets presenting two simultaneous personalities, one of
@@ -42,10 +42,10 @@ Signed-off-by: Matej Hrica <mhrica@redhat.com>
  create mode 100644 net/tsi/af_tsi.h
 
 diff --git a/include/linux/socket.h b/include/linux/socket.h
-index c3322eb3d686..5ae7f94b3abc 100644
+index 2a8d7b14f..643e6519a 100644
 --- a/include/linux/socket.h
 +++ b/include/linux/socket.h
-@@ -240,8 +240,11 @@ struct ucred {
+@@ -254,8 +254,11 @@ struct ucred {
  #define AF_MCTP		45	/* Management component
  				 * transport protocol
  				 */
@@ -58,7 +58,7 @@ index c3322eb3d686..5ae7f94b3abc 100644
  
  /* Protocol families, same as address families. */
  #define PF_UNSPEC	AF_UNSPEC
-@@ -292,6 +295,9 @@ struct ucred {
+@@ -306,6 +309,9 @@ struct ucred {
  #define PF_SMC		AF_SMC
  #define PF_XDP		AF_XDP
  #define PF_MCTP		AF_MCTP
@@ -69,10 +69,10 @@ index c3322eb3d686..5ae7f94b3abc 100644
  
  /* Maximum queue length specifiable by listen.  */
 diff --git a/net/Kconfig b/net/Kconfig
-index a629f92dc86b..91dfb9152b5b 100644
+index e38477393..0dca70534 100644
 --- a/net/Kconfig
 +++ b/net/Kconfig
-@@ -274,6 +274,7 @@ source "net/switchdev/Kconfig"
+@@ -281,6 +281,7 @@ source "net/switchdev/Kconfig"
  source "net/l3mdev/Kconfig"
  source "net/qrtr/Kconfig"
  source "net/ncsi/Kconfig"
@@ -81,19 +81,19 @@ index a629f92dc86b..91dfb9152b5b 100644
  config PCPU_DEV_REFCNT
  	bool "Use percpu variables to maintain network device refcount"
 diff --git a/net/Makefile b/net/Makefile
-index 65bb8c72a35e..c1db937f3212 100644
+index 5b2dd7f07..f7b26fb55 100644
 --- a/net/Makefile
 +++ b/net/Makefile
-@@ -79,3 +79,4 @@ obj-$(CONFIG_XDP_SOCKETS)	+= xdp/
- obj-$(CONFIG_MPTCP)		+= mptcp/
+@@ -75,3 +75,4 @@ obj-$(CONFIG_MPTCP)		+= mptcp/
  obj-$(CONFIG_MCTP)		+= mctp/
  obj-$(CONFIG_NET_HANDSHAKE)	+= handshake/
+ obj-$(CONFIG_NET_SHAPER)	+= shaper/
 +obj-$(CONFIG_TSI)		+= tsi/
 diff --git a/net/socket.c b/net/socket.c
-index 723bc3a1ba5c..27c1bf6c9aa9 100644
+index 63c69a0fa..c300e56af 100644
 --- a/net/socket.c
 +++ b/net/socket.c
-@@ -217,6 +217,9 @@ static const char * const pf_family_names[] = {
+@@ -220,6 +220,9 @@ static const char * const pf_family_names[] = {
  	[PF_SMC]	= "PF_SMC",
  	[PF_XDP]	= "PF_XDP",
  	[PF_MCTP]	= "PF_MCTP",
@@ -105,7 +105,7 @@ index 723bc3a1ba5c..27c1bf6c9aa9 100644
  /*
 diff --git a/net/tsi/Kconfig b/net/tsi/Kconfig
 new file mode 100644
-index 000000000000..0f52ac6c9fa1
+index 000000000..0f52ac6c9
 --- /dev/null
 +++ b/net/tsi/Kconfig
 @@ -0,0 +1,7 @@
@@ -118,7 +118,7 @@ index 000000000000..0f52ac6c9fa1
 +	  TSI (Transparent Socket Impersonation).
 diff --git a/net/tsi/Makefile b/net/tsi/Makefile
 new file mode 100644
-index 000000000000..8b3cf74116a5
+index 000000000..8b3cf7411
 --- /dev/null
 +++ b/net/tsi/Makefile
 @@ -0,0 +1,4 @@
@@ -128,7 +128,7 @@ index 000000000000..8b3cf74116a5
 +tsi-y := af_tsi.o
 diff --git a/net/tsi/af_tsi.c b/net/tsi/af_tsi.c
 new file mode 100644
-index 000000000000..3d2bcd8d2ba4
+index 000000000..649d9282b
 --- /dev/null
 +++ b/net/tsi/af_tsi.c
 @@ -0,0 +1,1577 @@
@@ -216,7 +216,7 @@ index 000000000000..3d2bcd8d2ba4
 +	vm_addr.svm_port = VMADDR_PORT_ANY;
 +	vm_addr.svm_cid = VMADDR_CID_ANY;
 +
-+	err = kernel_bind(*csocket, (struct sockaddr *)&vm_addr,
++	err = kernel_bind(*csocket, (struct sockaddr_unsized *)&vm_addr,
 +			  sizeof(struct sockaddr_vm));
 +	if (err) {
 +		pr_debug("%s: error binding port\n", __func__);
@@ -325,7 +325,8 @@ index 000000000000..3d2bcd8d2ba4
 +	return 0;
 +}
 +
-+static int tsi_bind(struct socket *sock, struct sockaddr *addr, int addr_len)
++static int tsi_bind(struct socket *sock, struct sockaddr_unsized *addr,
++		    int addr_len)
 +{
 +	struct sock *sk = sock->sk;
 +	struct tsi_sock *tsk;
@@ -371,7 +372,7 @@ index 000000000000..3d2bcd8d2ba4
 +	addr_vsock.svm_cid = VMADDR_CID_ANY;
 +	addr_vsock.svm_port = VMADDR_PORT_ANY;
 +
-+	err = vsocket->ops->bind(vsocket, (struct sockaddr *)&addr_vsock,
++	err = vsocket->ops->bind(vsocket, (struct sockaddr_unsized *)&addr_vsock,
 +				 sizeof(addr_vsock));
 +	if (err) {
 +		pr_debug("%s: error setting up vsock listener: %d\n", __func__,
@@ -402,7 +403,7 @@ index 000000000000..3d2bcd8d2ba4
 +	vm_addr.svm_port = VMADDR_PORT_ANY;
 +	vm_addr.svm_cid = VMADDR_CID_ANY;
 +
-+	err = kernel_bind(vsocket, (struct sockaddr *)&vm_addr,
++	err = kernel_bind(vsocket, (struct sockaddr_unsized *)&vm_addr,
 +			  sizeof(struct sockaddr_vm));
 +	if (err) {
 +		pr_debug("%s: error binding port: %d\n", __func__, err);
@@ -430,7 +431,8 @@ index 000000000000..3d2bcd8d2ba4
 +	return 0;
 +}
 +
-+static int tsi_connect(struct socket *sock, struct sockaddr *addr, int addr_len,
++static int tsi_connect(struct socket *sock, struct sockaddr_unsized *addr,
++		       int addr_len,
 +		       int flags)
 +{
 +	struct sock *sk = sock->sk;
@@ -534,7 +536,7 @@ index 000000000000..3d2bcd8d2ba4
 +		else
 +			vm_addr.svm_port = TSI_DEFAULT_PORT;
 +
-+		err = kernel_connect(vsocket, (struct sockaddr *)&vm_addr,
++		err = kernel_connect(vsocket, (struct sockaddr_unsized *)&vm_addr,
 +				     sizeof(struct sockaddr_vm), 0);
 +		if (err < 0) {
 +			pr_debug("%s: error connecting vsock endpoint: %d\n",
@@ -1249,7 +1251,6 @@ index 000000000000..3d2bcd8d2ba4
 +					      0, 0,           /* source addr/port - don't care */
 +					      daddr, dport,   /* dest addr/port */
 +					      0, 0,           /* device indices */
-+					      net->ipv4.udp_table,
 +					      NULL);
 +
 +		if (listener) {
@@ -1276,7 +1277,6 @@ index 000000000000..3d2bcd8d2ba4
 +					      NULL, 0,        /* source addr/port - don't care */
 +					      daddr, dport,   /* dest addr/port */
 +					      0, 0,           /* device indices */
-+					      net->ipv4.udp_table,
 +					      NULL);
 +
 +		if (listener) {
@@ -1711,7 +1711,7 @@ index 000000000000..3d2bcd8d2ba4
 +MODULE_LICENSE("GPL v2");
 diff --git a/net/tsi/af_tsi.h b/net/tsi/af_tsi.h
 new file mode 100644
-index 000000000000..b74966fd7ae3
+index 000000000..b74966fd7
 --- /dev/null
 +++ b/net/tsi/af_tsi.h
 @@ -0,0 +1,107 @@
@@ -1823,10 +1823,10 @@ index 000000000000..b74966fd7ae3
 +
 +#endif
 diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
-index cd60ece2fd58..6e345bfd8fc2 100644
+index 18dd28b2b..4518767fb 100644
 --- a/security/selinux/hooks.c
 +++ b/security/selinux/hooks.c
-@@ -1302,7 +1302,13 @@ static inline u16 socket_type_to_security_class(int family, int type, int protoc
+@@ -1318,7 +1318,13 @@ static inline u16 socket_type_to_security_class(int family, int type, int protoc
  			return SECCLASS_XDP_SOCKET;
  		case PF_MCTP:
  			return SECCLASS_MCTP_SOCKET;
@@ -1842,25 +1842,23 @@ index cd60ece2fd58..6e345bfd8fc2 100644
  #endif
  		}
 diff --git a/security/selinux/include/classmap.h b/security/selinux/include/classmap.h
-index 7229c9bf6c27..f08d24321603 100644
+index 90cb61b16..e98b5d0fc 100644
 --- a/security/selinux/include/classmap.h
 +++ b/security/selinux/include/classmap.h
-@@ -173,6 +173,7 @@ const struct security_class_mapping secclass_map[] = {
- 	    NULL } },
+@@ -174,6 +174,7 @@ const struct security_class_mapping secclass_map[] = {
+ 	    "map_create_as", "prog_load_as", NULL } },
  	{ "xdp_socket", { COMMON_SOCK_PERMS, NULL } },
  	{ "mctp_socket", { COMMON_SOCK_PERMS, NULL } },
 +	{ "tsi_socket", { COMMON_SOCK_PERMS, NULL } },
  	{ "perf_event",
  	  { "open", "cpu", "kernel", "tracepoint", "read", "write", NULL } },
  	{ "anon_inode", { COMMON_FILE_PERMS, NULL } },
-@@ -181,6 +182,6 @@ const struct security_class_mapping secclass_map[] = {
- 	{ NULL }
- };
+@@ -187,7 +188,7 @@ const struct security_class_mapping secclass_map[] = {
+ #ifdef __KERNEL__ /* avoid this check when building host programs */
+ #include <linux/socket.h>
  
 -#if PF_MAX > 46
 +#if PF_MAX > 49
  #error New address family defined, please update secclass_map.
  #endif
--- 
-2.55.0
-
+ #endif

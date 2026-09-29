@@ -1,0 +1,34 @@
+From 019085d1365f9eafe28556ff972f5a9293b33b1f Mon Sep 17 00:00:00 2001
+From: Val Packett <val@invisiblethingslab.com>
+Date: Mon, 28 Sep 2026 23:13:41 +0800
+Subject: [PATCH 19/23] drm/virtio: support CREATE_GUEST_HANDLE and
+ BLOB_CTX_ID_FIX negotiated bit) and attach imported bufs to the ctx
+
+---
+ drivers/gpu/drm/virtio/virtgpu_prime.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_prime.c b/drivers/gpu/drm/virtio/virtgpu_prime.c
+index 70b3b836e..5191f6cfa 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_prime.c
++++ b/drivers/gpu/drm/virtio/virtgpu_prime.c
+@@ -253,6 +253,10 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
+ 	params.blob = true;
+ 	params.blob_mem = VIRTGPU_BLOB_MEM_GUEST;
+ 	params.blob_flags = VIRTGPU_BLOB_FLAG_USE_SHAREABLE;
++	if (vgdev->has_create_guest_handle)
++		/* No way for userspace to decide with this API, but most existing
++		 * use cases do require shareable handles on the host side */
++		params.blob_flags |= VIRTGPU_BLOB_FLAG_CREATE_GUEST_HANDLE;
+ 	params.size = attach->dmabuf->size;
+ 
+ 	virtio_gpu_cmd_resource_create_blob(vgdev, bo, &params,
+@@ -274,6 +278,8 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
+ 
+ static const struct drm_gem_object_funcs virtgpu_gem_dma_buf_funcs = {
+ 	.free = virtgpu_dma_buf_free_obj,
++	.open = virtio_gpu_gem_object_open,
++	.close = virtio_gpu_gem_object_close,
+ };
+ 
+ static void virtgpu_dma_buf_move_notify(struct dma_buf_attachment *attach)

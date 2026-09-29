@@ -1,0 +1,107 @@
+From 099fbbf3f80c7f20c518e86ca84b69c37c35e244 Mon Sep 17 00:00:00 2001
+From: Val Packett <val@invisiblethingslab.com>
+Date: Mon, 28 Sep 2026 23:14:13 +0800
+Subject: [PATCH 21/23] drm/virtio: support CREATE_GUEST_HANDLE and
+ BLOB_CTX_ID_FIX (bit/table/kms/verify_blob re-authored)
+
+---
+ drivers/gpu/drm/virtio/virtgpu_drv.c   | 1 +
+ drivers/gpu/drm/virtio/virtgpu_drv.h   | 1 +
+ drivers/gpu/drm/virtio/virtgpu_ioctl.c | 8 +++++---
+ drivers/gpu/drm/virtio/virtgpu_kms.c   | 8 ++++++--
+ include/uapi/linux/virtio_gpu.h        | 5 +++++
+ 5 files changed, 18 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_drv.c b/drivers/gpu/drm/virtio/virtgpu_drv.c
+index 6ef8a19ba..7b1d1ce84 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_drv.c
++++ b/drivers/gpu/drm/virtio/virtgpu_drv.c
+@@ -175,6 +175,7 @@ static unsigned int features[] = {
+ 	 */
+ 	VIRTIO_GPU_F_FENCE_PASSING,
+ 	VIRTIO_GPU_F_CREATE_GUEST_HANDLE,
++	VIRTIO_GPU_F_BLOB_CTX_ID_FIX,
+ };
+ static struct virtio_driver virtio_gpu_driver = {
+ 	.feature_table = features,
+diff --git a/drivers/gpu/drm/virtio/virtgpu_drv.h b/drivers/gpu/drm/virtio/virtgpu_drv.h
+index 294453001..559c701b1 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_drv.h
++++ b/drivers/gpu/drm/virtio/virtgpu_drv.h
+@@ -282,6 +282,7 @@ struct virtio_gpu_device {
+ 	bool has_blob_alignment;
+ 	bool has_fence_passing;
+ 	bool has_create_guest_handle;
++	bool has_blob_ctx_id_fix;
+ 	struct virtio_shm_region host_visible_region;
+ 	struct drm_mm host_visible_mm;
+ 
+diff --git a/drivers/gpu/drm/virtio/virtgpu_ioctl.c b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
+index 11e906212..7ffb9e294 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_ioctl.c
++++ b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
+@@ -487,9 +487,6 @@ static int verify_blob(struct virtio_gpu_device *vgdev,
+ 		/* Must be dword aligned. */
+ 		if (rc_blob->cmd_size % 4 != 0)
+ 			return -EINVAL;
+-
+-		params->ctx_id = vfpriv->ctx_id;
+-		params->blob_id = rc_blob->blob_id;
+ 	} else {
+ 		if (rc_blob->blob_id != 0)
+ 			return -EINVAL;
+@@ -498,6 +495,11 @@ static int verify_blob(struct virtio_gpu_device *vgdev,
+ 			return -EINVAL;
+ 	}
+ 
++	if (*host3d_blob || vgdev->has_blob_ctx_id_fix) {
++		params->ctx_id = vfpriv->ctx_id;
++		params->blob_id = rc_blob->blob_id;
++	}
++
+ 	params->blob_mem = rc_blob->blob_mem;
+ 	params->size = rc_blob->size;
+ 	params->blob = true;
+diff --git a/drivers/gpu/drm/virtio/virtgpu_kms.c b/drivers/gpu/drm/virtio/virtgpu_kms.c
+index 0b7c84f25..734dccdb9 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_kms.c
++++ b/drivers/gpu/drm/virtio/virtgpu_kms.c
+@@ -215,6 +215,9 @@ int virtio_gpu_init(struct virtio_device *vdev, struct drm_device *dev)
+ 	if (virtio_has_feature(vgdev->vdev, VIRTIO_GPU_F_CREATE_GUEST_HANDLE)) {
+ 		vgdev->has_create_guest_handle = true;
+ 	}
++	if (virtio_has_feature(vgdev->vdev, VIRTIO_GPU_F_BLOB_CTX_ID_FIX)) {
++		vgdev->has_blob_ctx_id_fix = true;
++	}
+ 
+ 	DRM_INFO("features: %cvirgl %cedid %cresource_blob %chost_visible %cfence_passing",
+ 		 vgdev->has_virgl_3d    ? '+' : '-',
+@@ -223,9 +226,10 @@ int virtio_gpu_init(struct virtio_device *vdev, struct drm_device *dev)
+ 		 vgdev->has_host_visible ? '+' : '-',
+ 		 vgdev->has_fence_passing ? '+' : '-');
+ 
+-	DRM_INFO("features: %ccontext_init %ccreate_guest_handle\n",
++	DRM_INFO("features: %ccontext_init %ccreate_guest_handle %cblob_ctx_id_fix\n",
+ 		 vgdev->has_context_init ? '+' : '-',
+-		 vgdev->has_create_guest_handle ? '+' : '-');
++		 vgdev->has_create_guest_handle ? '+' : '-',
++		 vgdev->has_blob_ctx_id_fix ? '+' : '-');
+ 
+ 	ret = virtio_find_vqs(vgdev->vdev, 2, vqs, vqs_info, NULL);
+ 	if (ret) {
+diff --git a/include/uapi/linux/virtio_gpu.h b/include/uapi/linux/virtio_gpu.h
+index bb5b581bf..cb04f35b0 100644
+--- a/include/uapi/linux/virtio_gpu.h
++++ b/include/uapi/linux/virtio_gpu.h
+@@ -82,6 +82,11 @@
+  * VIRTIO_GPU_BLOB_FLAG_CREATE_GUEST_HANDLE
+  */
+ #define VIRTIO_GPU_F_CREATE_GUEST_HANDLE 6
++/*
++ * It is always safe to pass the current context ID to
++ * VIRTIO_GPU_CMD_RESOURCE_CREATE_BLOB, including for guest blobs
++ */
++#define VIRTIO_GPU_F_BLOB_CTX_ID_FIX 7
+ 
+ enum virtio_gpu_ctrl_type {
+ 	VIRTIO_GPU_UNDEFINED = 0,

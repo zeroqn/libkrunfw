@@ -1,9 +1,7 @@
-From 69ed5b8004028f1e588d35369f2e6148f90d4e7f Mon Sep 17 00:00:00 2001
-From: Brian Daniels <briandaniels@google.com>
-Date: Tue, 8 Sep 2026 10:40:13 +0200
-Subject: [PATCH 31/36] media: virtio: Add skeleton virtio-media driver
-
+From a89234dc46d6bc9dcf0d6ec15961d4cc79d68565 Mon Sep 17 00:00:00 2001
 From: Alexandre Courbot <gnurou@gmail.com>
+Date: Tue, 8 Sep 2026 10:40:13 +0200
+Subject: [PATCH 12/23] media: virtio: Add skeleton virtio-media driver
 
 This patch adds a minimum viable virtio-media driver that binds to the
 virtio device and registers a V4L2 device and a video device, but lacks
@@ -35,18 +33,18 @@ Signed-off-by: Brian Daniels <briandaniels@google.com>
  create mode 100644 include/uapi/linux/virtio_media.h
 
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 259b63cee143..1042ebc5f336 100644
+index 95cd976a0..cd396f89d 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
-@@ -24498,6 +24498,7 @@ F:	Documentation/devicetree/bindings/virtio/
+@@ -28563,6 +28563,7 @@ F:	Documentation/devicetree/bindings/virtio/
  F:	Documentation/driver-api/virtio/
  F:	drivers/block/virtio_blk.c
  F:	drivers/crypto/virtio/
 +F:	drivers/media/virtio/
- F:	drivers/net/virtio_net.c
  F:	drivers/vdpa/
  F:	drivers/virtio/
-@@ -24610,6 +24611,13 @@ S:	Maintained
+ F:	include/linux/vdpa.h
+@@ -28675,6 +28676,13 @@ S:	Maintained
  F:	drivers/iommu/virtio-iommu.c
  F:	include/uapi/linux/virtio_iommu.h
  
@@ -58,10 +56,10 @@ index 259b63cee143..1042ebc5f336 100644
 +F:	include/uapi/linux/virtio_media.h
 +
  VIRTIO MEM DRIVER
- M:	David Hildenbrand <david@redhat.com>
+ M:	David Hildenbrand <david@kernel.org>
  L:	virtualization@lists.linux.dev
 diff --git a/drivers/media/Kconfig b/drivers/media/Kconfig
-index 6abc9302cd84..ce7d088e7441 100644
+index 6abc9302c..ce7d088e7 100644
 --- a/drivers/media/Kconfig
 +++ b/drivers/media/Kconfig
 @@ -136,6 +136,19 @@ config MEDIA_PLATFORM_SUPPORT
@@ -85,7 +83,7 @@ index 6abc9302cd84..ce7d088e7441 100644
  	bool
  	prompt "Test drivers" if MEDIA_SUPPORT_FILTER
 diff --git a/drivers/media/Makefile b/drivers/media/Makefile
-index 20fac24e4f0f..357e786cc011 100644
+index 20fac24e4..357e786cc 100644
 --- a/drivers/media/Makefile
 +++ b/drivers/media/Makefile
 @@ -23,6 +23,8 @@ obj-$(CONFIG_DVB_CORE) += dvb-core/
@@ -99,7 +97,7 @@ index 20fac24e4f0f..357e786cc011 100644
  #
 diff --git a/drivers/media/virtio/Makefile b/drivers/media/virtio/Makefile
 new file mode 100644
-index 000000000000..09d9834da5de
+index 000000000..09d9834da
 --- /dev/null
 +++ b/drivers/media/virtio/Makefile
 @@ -0,0 +1,7 @@
@@ -112,7 +110,7 @@ index 000000000000..09d9834da5de
 +obj-$(CONFIG_MEDIA_VIRTIO) += virtio-media.o
 diff --git a/drivers/media/virtio/virtio_media.h b/drivers/media/virtio/virtio_media.h
 new file mode 100644
-index 000000000000..7acb2b842010
+index 000000000..7acb2b842
 --- /dev/null
 +++ b/drivers/media/virtio/virtio_media.h
 @@ -0,0 +1,95 @@
@@ -213,7 +211,7 @@ index 000000000000..7acb2b842010
 +
 diff --git a/drivers/media/virtio/virtio_media_driver.c b/drivers/media/virtio/virtio_media_driver.c
 new file mode 100644
-index 000000000000..25f2ceaa6c48
+index 000000000..25f2ceaa6
 --- /dev/null
 +++ b/drivers/media/virtio/virtio_media_driver.c
 @@ -0,0 +1,146 @@
@@ -365,7 +363,7 @@ index 000000000000..25f2ceaa6c48
 +MODULE_LICENSE("Dual BSD/GPL");
 diff --git a/include/uapi/linux/virtio_media.h b/include/uapi/linux/virtio_media.h
 new file mode 100644
-index 000000000000..ac3d75c752d9
+index 000000000..ac3d75c75
 --- /dev/null
 +++ b/include/uapi/linux/virtio_media.h
 @@ -0,0 +1,288 @@
@@ -658,10 +656,10 @@ index 000000000000..ac3d75c752d9
 +
 +#endif // _UAPI__LINUX_VIRTIO_MEDIA_H
 diff --git a/usr/include/Makefile b/usr/include/Makefile
-index 58173cfe5ff1..19dd06fe0062 100644
+index ee69dd9d9..df106b5d9 100644
 --- a/usr/include/Makefile
 +++ b/usr/include/Makefile
-@@ -42,6 +42,7 @@ no-header-test += linux/usb/audio.h
+@@ -37,6 +37,7 @@ no-header-test += linux/usb/audio.h
  no-header-test += linux/v4l2-mediabus.h
  no-header-test += linux/v4l2-subdev.h
  no-header-test += linux/videodev2.h
@@ -669,6 +667,3 @@ index 58173cfe5ff1..19dd06fe0062 100644
  no-header-test += linux/vm_sockets.h
  no-header-test += sound/asequencer.h
  no-header-test += sound/asoc.h
--- 
-2.55.0
-
