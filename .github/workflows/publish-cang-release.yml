@@ -3,9 +3,14 @@ name: Publish cang prebuilt binaries
 on:
   push:
     branches:
+      # `cang` bundles the newest kernel line, `cang-lts` the LTS line. Both
+      # publish permanent v<version>-cang.<n> / v<version>-cang-lts.<n>
+      # releases, and each gets its own rolling <prefix>-<sha> prereleases.
       - cang
+      - cang-lts
     tags:
       - "v[0-9]*-cang.*"
+      - "v[0-9]*-cang-lts.*"
 
 permissions:
   contents: write
@@ -16,9 +21,6 @@ concurrency:
   # Pushes to the same ref still serialize.
   group: cang-prebuilt-releases-${{ github.ref_name }}
   cancel-in-progress: false
-
-env:
-  RELEASE_PREFIX: cang
 
 jobs:
   build-x86_64:
@@ -60,16 +62,30 @@ jobs:
     name: Build aarch64 prebuilt package
     runs-on: ubuntu-24.04-arm
     steps:
+      - name: Check release scope
+        id: scope
+        run: |
+          if grep -qx aarch64 release-arches; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "aarch64 is not in release-arches for this branch; no aarch64 asset is published" >&2
+          fi
+
       - name: Code checkout
+        if: steps.scope.outputs.ready == 'true'
         uses: actions/checkout@v4
 
       - name: Install dependencies
+        if: steps.scope.outputs.ready == 'true'
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev
 
       - name: Set up ccache
+        if: steps.scope.outputs.ready == 'true'
         uses: ./.github/actions/setup-ccache
 
       - name: Build aarch64 package
+        if: steps.scope.outputs.ready == 'true'
         run: |
           set -euo pipefail
           make
@@ -77,14 +93,14 @@ jobs:
           cd tmp
           tar czf ../libkrunfw-aarch64.tgz lib64
           cd ..
-          make clean
         shell: bash
 
       - name: Show ccache stats
-        if: always()
+        if: steps.scope.outputs.ready == 'true'
         run: ccache -s
 
       - name: Upload aarch64 workflow artifact
+        if: steps.scope.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: libkrunfw-aarch64
@@ -95,16 +111,30 @@ jobs:
     name: Build riscv64 prebuilt package
     runs-on: ubuntu-latest
     steps:
+      - name: Check release scope
+        id: scope
+        run: |
+          if grep -qx riscv64 release-arches; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "riscv64 is not in release-arches for this branch; no riscv64 asset is published" >&2
+          fi
+
       - name: Code checkout
+        if: steps.scope.outputs.ready == 'true'
         uses: actions/checkout@v4
 
       - name: Install dependencies
+        if: steps.scope.outputs.ready == 'true'
         run: sudo apt-get update && sudo apt-get install -y make gcc bc bison flex elfutils python3-pyelftools curl patch libelf-dev gcc-riscv64-linux-gnu
 
       - name: Set up ccache
+        if: steps.scope.outputs.ready == 'true'
         uses: ./.github/actions/setup-ccache
 
       - name: Build riscv64 package
+        if: steps.scope.outputs.ready == 'true'
         run: |
           set -euo pipefail
           make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu-
@@ -112,14 +142,14 @@ jobs:
           cd tmp
           tar czf ../libkrunfw-riscv64.tgz lib64
           cd ..
-          make ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- clean
         shell: bash
 
       - name: Show ccache stats
-        if: always()
+        if: steps.scope.outputs.ready == 'true'
         run: ccache -s
 
       - name: Upload riscv64 workflow artifact
+        if: steps.scope.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: libkrunfw-riscv64
@@ -153,24 +183,24 @@ jobs:
           short_sha="${GITHUB_SHA::12}"
 
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            # A pushed v<version>-cang.<n> tag publishes a permanent,
-            # version-addressed release: the tag is the release identity and
-            # already pins the commit, so no --target is needed. `cang-<sha>`
-            # releases stay rolling dev artifacts that the prune job below
-            # deletes; its filter only matches `cang-`, so permanent releases
-            # are never pruned.
+            # A pushed v<version>-cang.<n> / v<version>-cang-lts.<n> tag publishes
+            # a permanent, version-addressed release: the tag is the release
+            # identity and already pins the commit, so no --target is needed.
+            # Rolling <prefix>-<sha> releases stay dev artifacts that the prune
+            # job below deletes; its filter only matches those, so permanent
+            # releases are never pruned.
             version="${GITHUB_REF_NAME#v}"
             full_version="$(sed -n 's/^FULL_VERSION = \(.*\)$/\1/p' Makefile)"
             if [ -z "${full_version}" ]; then
               echo "failed to read FULL_VERSION from Makefile" >&2
               exit 1
             fi
-            if ! printf '%s' "${version}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-cang\.[0-9]+$'; then
-              echo "tag must look like v<major>.<minor>.<patch>-cang.<n>: ${GITHUB_REF_NAME}" >&2
+            if ! printf '%s' "${version}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+-cang(-lts)?\.[0-9]+$'; then
+              echo "tag must look like v<major>.<minor>.<patch>-cang.<n> or v<major>.<minor>.<patch>-cang-lts.<n>: ${GITHUB_REF_NAME}" >&2
               exit 1
             fi
             case "${version}" in
-              "${full_version}-cang."*) ;;
+              "${full_version}-cang."*|"${full_version}-cang-lts."*) ;;
               *)
                 echo "tag ${GITHUB_REF_NAME} does not match this branch's libkrunfw ${full_version}" >&2
                 exit 1
@@ -182,9 +212,16 @@ jobs:
               echo "permanent=true"
             } >> "${GITHUB_OUTPUT}"
           else
+            # The LTS branch gets its own rolling prefix so the two lines never
+            # shadow each other's dev releases.
+            if [ "${GITHUB_REF_NAME}" = "cang-lts" ]; then
+              prefix="cang-lts"
+            else
+              prefix="cang"
+            fi
             {
-              echo "tag_name=${RELEASE_PREFIX}-${short_sha}"
-              echo "release_title=cang ${short_sha}"
+              echo "tag_name=${prefix}-${short_sha}"
+              echo "release_title=${prefix} ${short_sha}"
               echo "permanent=false"
             } >> "${GITHUB_OUTPUT}"
           fi
@@ -212,11 +249,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          test -f dist/libkrunfw-x86_64.tgz
-          test -f dist/libkrunfw-x86_64-lto.tgz
-          test -f dist/libkrunfw-x86_64-kvm-lto.tgz
-          test -f dist/libkrunfw-aarch64.tgz
-          test -f dist/libkrunfw-riscv64.tgz
+          # x86_64 is built for every line; the other arches only for a branch
+          # that lists them in release-arches (its kernel config is refreshed
+          # for this line's KERNEL_VERSION and the build is verified).
+          expected="dist/libkrunfw-x86_64.tgz dist/libkrunfw-x86_64-lto.tgz dist/libkrunfw-x86_64-kvm-lto.tgz"
+          if grep -qx aarch64 release-arches; then
+            expected="${expected} dist/libkrunfw-aarch64.tgz"
+          fi
+          if grep -qx riscv64 release-arches; then
+            expected="${expected} dist/libkrunfw-riscv64.tgz"
+          fi
+          for asset in ${expected}; do
+            test -f "${asset}" || { echo "missing expected asset ${asset}" >&2; exit 1; }
+          done
+          echo "assets (release-arches: $(tr '\n' ' ' < release-arches)):"
+          ls -l dist/*.tgz
 
           notes="Prebuilt libkrunfw artifacts for cang commit ${GITHUB_SHA}. Source is available from the release tag archive."
 
@@ -244,7 +291,7 @@ jobs:
         shell: bash
 
   prune-old-cang-releases:
-    name: Keep latest 10 cang prereleases
+    name: Keep latest 10 cang prereleases per line
     if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
     needs: publish-release
@@ -255,11 +302,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh release list --limit 100 --json tagName,createdAt \
-            --jq 'sort_by(.createdAt) | reverse | map(select(.tagName | startswith("cang-"))) | .[10:][]?.tagName' |
-          while IFS= read -r tag_name; do
-            [ -n "${tag_name}" ] || continue
-            echo "Deleting old cang release ${tag_name}"
-            gh release delete "${tag_name}" --yes --cleanup-tag
+          # One list per rolling prefix: `cang-<sha>` and `cang-lts-<sha>`.
+          # Permanent v<version>-cang(-lts).<n> releases never match.
+          for prefix in cang cang-lts; do
+            gh release list --limit 100 --json tagName,createdAt \
+              --jq "sort_by(.createdAt) | reverse | map(select(.tagName | test(\"^${prefix}-[0-9a-f]{12}$\"))) | .[10:][]?.tagName" |
+            while IFS= read -r tag_name; do
+              [ -n "${tag_name}" ] || continue
+              echo "Deleting old ${prefix} release ${tag_name}"
+              gh release delete "${tag_name}" --yes --cleanup-tag
+            done
           done
         shell: bash
