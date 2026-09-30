@@ -8,8 +8,8 @@ KERNEL_PATCHES = $(shell find patches/ -name "0*.patch" | sort)
 CURL_FLAGS = -L --fail --retry 5 --retry-delay 2 --retry-all-errors
 
 ABI_VERSION = 5
-FULL_VERSION = 5.3.0
-TIMESTAMP = "Tue Mar 10 13:28:56 CET 2026"
+FULL_VERSION = 5.6.2
+TIMESTAMP = "Mon Sep 21 20:29:27 CEST 2026"
 
 KERNEL_SOURCES = $(KERNEL_VERSION)-lto
 KERNEL_CONFIG = config-libkrunfw_x86_64-lto
