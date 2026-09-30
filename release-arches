@@ -1,0 +1,8 @@
+# Architectures this branch's release carries.
+#
+# The publish workflow builds and asserts exactly these: `x86_64` is always
+# built, and every other line here must have its kernel config
+# (config-libkrunfw_<arch>) refreshed for this branch's KERNEL_VERSION with a
+# verified build - the arm64 fork patches in particular live only on the LTS
+# line.
+x86_64
