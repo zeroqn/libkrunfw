@@ -62,19 +62,21 @@ jobs:
     name: Build aarch64 prebuilt package
     runs-on: ubuntu-24.04-arm
     steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
       - name: Check release scope
         id: scope
         run: |
+          # release-arches is this branch's file, so it can only be read after
+          # the checkout: the repository may carry other lines (and other
+          # release scopes) on its other branches.
           if grep -qx aarch64 release-arches; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "aarch64 is not in release-arches for this branch; no aarch64 asset is published" >&2
           fi
-
-      - name: Code checkout
-        if: steps.scope.outputs.ready == 'true'
-        uses: actions/checkout@v4
 
       - name: Install dependencies
         if: steps.scope.outputs.ready == 'true'
@@ -111,19 +113,21 @@ jobs:
     name: Build riscv64 prebuilt package
     runs-on: ubuntu-latest
     steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
       - name: Check release scope
         id: scope
         run: |
+          # release-arches is this branch's file, so it can only be read after
+          # the checkout: the repository may carry other lines (and other
+          # release scopes) on its other branches.
           if grep -qx riscv64 release-arches; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "riscv64 is not in release-arches for this branch; no riscv64 asset is published" >&2
           fi
-
-      - name: Code checkout
-        if: steps.scope.outputs.ready == 'true'
-        uses: actions/checkout@v4
 
       - name: Install dependencies
         if: steps.scope.outputs.ready == 'true'
