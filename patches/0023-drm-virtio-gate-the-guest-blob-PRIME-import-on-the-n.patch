@@ -17,7 +17,7 @@ dereferences.
  2 files changed, 18 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/gpu/drm/virtio/virtgpu_ioctl.c b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
-index 7ffb9e294..fa690da87 100644
+index 1c76e5f0e..26639ac1f 100644
 --- a/drivers/gpu/drm/virtio/virtgpu_ioctl.c
 +++ b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
 @@ -122,6 +122,7 @@ static int virtio_gpu_getparam_ioctl(struct drm_device *dev, void *data,
@@ -29,7 +29,7 @@ index 7ffb9e294..fa690da87 100644
  		value = vgdev->has_create_guest_handle ? 1 : 0;
  		break;
 diff --git a/drivers/gpu/drm/virtio/virtgpu_prime.c b/drivers/gpu/drm/virtio/virtgpu_prime.c
-index 4a68bee5f..25339f0ca 100644
+index 278f4bac8..25339f0ca 100644
 --- a/drivers/gpu/drm/virtio/virtgpu_prime.c
 +++ b/drivers/gpu/drm/virtio/virtgpu_prime.c
 @@ -230,7 +230,7 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
@@ -62,7 +62,7 @@ index 4a68bee5f..25339f0ca 100644
  		}
  	}
  
--	if (!vgdev->has_resource_blob)
+-	if (!vgdev->has_resource_blob || vgdev->has_virgl_3d)
 +	/*
 +	 * Importing a dma-buf as a guest blob is only useful when the host can
 +	 * give it a shareable handle, and only safe when the VMM accepts a
