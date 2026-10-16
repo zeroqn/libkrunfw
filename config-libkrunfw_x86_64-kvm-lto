@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 7.2.7-hardened1 Kernel Configuration
+# Linux/x86 7.2.10-hardened1 Kernel Configuration
 #
 CONFIG_CC_VERSION_TEXT="clang version 21.1.8"
 CONFIG_GCC_VERSION=0
@@ -3314,7 +3314,6 @@ CONFIG_CRYPTO_KDF800108_CTR=y
 # Certificates for signature checking
 #
 # CONFIG_SYSTEM_BLACKLIST_KEYRING is not set
-CONFIG_OPENSSL_SUPPORTS_ML_DSA=y
 # end of Certificates for signature checking
 
 # CONFIG_CRYPTO_KRB5 is not set
