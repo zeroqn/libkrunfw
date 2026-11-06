@@ -1,7 +1,7 @@
-From f803e07970ff014a99b9f4c6adf14b1e9dc41d08 Mon Sep 17 00:00:00 2001
+From f73b167f4d3bcc0658647367428865d83548523a Mon Sep 17 00:00:00 2001
 From: Dorinda Bassey <dbassey@redhat.com>
 Date: Tue, 8 Sep 2026 10:51:22 +0200
-Subject: [PATCH 17/23] media: virtio: fix the v4l2 API for newer kernels
+Subject: [PATCH 16/22] media: virtio: fix the v4l2 API for newer kernels
 
 v4l2_fh_add()/v4l2_fh_del() take the struct file * since 7.x, and the
 session helpers already carry it in session->file.

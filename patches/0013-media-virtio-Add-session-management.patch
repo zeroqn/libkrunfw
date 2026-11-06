@@ -1,7 +1,7 @@
-From 1a3f4043e4213ffe483f47ab94a934e9112f6548 Mon Sep 17 00:00:00 2001
+From dc19959adb00f1d67553448ae21d6e10fe1c5527 Mon Sep 17 00:00:00 2001
 From: Alexandre Courbot <gnurou@gmail.com>
 Date: Tue, 8 Sep 2026 10:44:39 +0200
-Subject: [PATCH 13/23] media: virtio: Add session management
+Subject: [PATCH 13/22] media: virtio: Add session management
 
 This patch adds session management to the virtio-media driver.
 A session is created when the /dev/videoX device is opened, and

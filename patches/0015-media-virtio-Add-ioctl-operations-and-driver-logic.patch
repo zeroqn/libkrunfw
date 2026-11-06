@@ -1,7 +1,7 @@
-From 644ef97ee794234be6ccab78070ca8ead3b4664e Mon Sep 17 00:00:00 2001
+From f24af2728a705177da57b3c233ef0dfff9e31453 Mon Sep 17 00:00:00 2001
 From: Alexandre Courbot <gnurou@gmail.com>
 Date: Tue, 8 Sep 2026 10:49:26 +0200
-Subject: [PATCH 15/23] media: virtio: Add ioctl operations and driver logic
+Subject: [PATCH 15/22] media: virtio: Add ioctl operations and driver logic
 
 This patch adds the ioctl operations and the remaining driver logic
 for polling and mmapping.
