@@ -1,7 +1,7 @@
-From aa59ad209889ae47226c71d8784476119ed98b41 Mon Sep 17 00:00:00 2001
+From 7040fbab404db43150b180a28106f21295626a55 Mon Sep 17 00:00:00 2001
 From: Asahi Lina <lina@asahilina.net>
 Date: Sun, 20 Oct 2024 01:23:41 +0900
-Subject: [PATCH 09/23] dax: Allow block size > PAGE_SIZE
+Subject: [PATCH 09/22] dax: Allow block size > PAGE_SIZE
 
 For virtio-dax, the file/FS blocksize is irrelevant. FUSE always uses
 large DAX blocks (2MiB), which will work with all host page sizes. Since
@@ -22,10 +22,10 @@ Signed-off-by: Asahi Lina <lina@asahilina.net>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/fs/dax.c b/fs/dax.c
-index df19c9317..da7e25497 100644
+index 1fbba0d21..ba3559bfe 100644
 --- a/fs/dax.c
 +++ b/fs/dax.c
-@@ -1243,7 +1243,7 @@ int dax_writeback_mapping_range(struct address_space *mapping,
+@@ -1246,7 +1246,7 @@ int dax_writeback_mapping_range(struct address_space *mapping,
  	int ret = 0;
  	unsigned int scanned = 0;
  

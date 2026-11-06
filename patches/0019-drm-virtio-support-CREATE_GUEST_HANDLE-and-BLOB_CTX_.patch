@@ -1,34 +1,36 @@
-From 019085d1365f9eafe28556ff972f5a9293b33b1f Mon Sep 17 00:00:00 2001
+From 89aba3b5134b46abadf566feadf154188babf06f Mon Sep 17 00:00:00 2001
 From: Val Packett <val@invisiblethingslab.com>
-Date: Mon, 28 Sep 2026 23:13:41 +0800
-Subject: [PATCH 19/23] drm/virtio: support CREATE_GUEST_HANDLE and
- BLOB_CTX_ID_FIX negotiated bit) and attach imported bufs to the ctx
+Date: Mon, 28 Sep 2026 23:14:12 +0800
+Subject: [PATCH 19/22] drm/virtio: support CREATE_GUEST_HANDLE and
+ BLOB_CTX_ID_FIX (9/BLOB_ALIGNMENT deliberately skipped)
 
 ---
- drivers/gpu/drm/virtio/virtgpu_prime.c | 6 ++++++
- 1 file changed, 6 insertions(+)
+ drivers/gpu/drm/virtio/virtgpu_ioctl.c | 2 ++
+ include/uapi/drm/virtgpu_drm.h         | 1 +
+ 2 files changed, 3 insertions(+)
 
-diff --git a/drivers/gpu/drm/virtio/virtgpu_prime.c b/drivers/gpu/drm/virtio/virtgpu_prime.c
-index 70b3b836e..5191f6cfa 100644
---- a/drivers/gpu/drm/virtio/virtgpu_prime.c
-+++ b/drivers/gpu/drm/virtio/virtgpu_prime.c
-@@ -253,6 +253,10 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
- 	params.blob = true;
- 	params.blob_mem = VIRTGPU_BLOB_MEM_GUEST;
- 	params.blob_flags = VIRTGPU_BLOB_FLAG_USE_SHAREABLE;
-+	if (vgdev->has_create_guest_handle)
-+		/* No way for userspace to decide with this API, but most existing
-+		 * use cases do require shareable handles on the host side */
-+		params.blob_flags |= VIRTGPU_BLOB_FLAG_CREATE_GUEST_HANDLE;
- 	params.size = attach->dmabuf->size;
+diff --git a/drivers/gpu/drm/virtio/virtgpu_ioctl.c b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
+index 9435edccc..24d3fac3a 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_ioctl.c
++++ b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
+@@ -122,6 +122,8 @@ static int virtio_gpu_getparam_ioctl(struct drm_device *dev, void *data,
+ 		if (!vgdev->has_blob_alignment)
+ 			return -ENOENT;
+ 		value = vgdev->blob_alignment;
++	case VIRTGPU_PARAM_CREATE_GUEST_HANDLE:
++		value = vgdev->has_create_guest_handle ? 1 : 0;
+ 		break;
+ 	default:
+ 		return -EINVAL;
+diff --git a/include/uapi/drm/virtgpu_drm.h b/include/uapi/drm/virtgpu_drm.h
+index a39cdc205..893ba8b48 100644
+--- a/include/uapi/drm/virtgpu_drm.h
++++ b/include/uapi/drm/virtgpu_drm.h
+@@ -101,6 +101,7 @@ struct drm_virtgpu_execbuffer {
+ #define VIRTGPU_PARAM_SUPPORTED_CAPSET_IDs 7 /* Bitmask of supported capability set ids */
+ #define VIRTGPU_PARAM_EXPLICIT_DEBUG_NAME 8 /* Ability to set debug name from userspace */
+ #define VIRTGPU_PARAM_BLOB_ALIGNMENT 9 /* Device alignment requirements for blobs */
++#define VIRTGPU_PARAM_CREATE_GUEST_HANDLE 10 /* Host handles for guest blob resources */
  
- 	virtio_gpu_cmd_resource_create_blob(vgdev, bo, &params,
-@@ -274,6 +278,8 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
- 
- static const struct drm_gem_object_funcs virtgpu_gem_dma_buf_funcs = {
- 	.free = virtgpu_dma_buf_free_obj,
-+	.open = virtio_gpu_gem_object_open,
-+	.close = virtio_gpu_gem_object_close,
- };
- 
- static void virtgpu_dma_buf_move_notify(struct dma_buf_attachment *attach)
+ struct drm_virtgpu_getparam {
+ 	__u64 param;

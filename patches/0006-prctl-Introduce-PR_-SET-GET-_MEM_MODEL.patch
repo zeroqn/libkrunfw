@@ -1,7 +1,7 @@
-From 33078773a4a36ecc782f2902ad5628f40a2ac2e0 Mon Sep 17 00:00:00 2001
+From 19d69a9c014be3ccf4c4bd7cf0199c5c434399c9 Mon Sep 17 00:00:00 2001
 From: Hector Martin <marcan@marcan.st>
 Date: Thu, 11 Apr 2024 09:51:20 +0900
-Subject: [PATCH 06/23] prctl: Introduce PR_{SET,GET}_MEM_MODEL
+Subject: [PATCH 06/22] prctl: Introduce PR_{SET,GET}_MEM_MODEL
 
 On some architectures, it is possible to query and/or change the CPU
 memory model. This allows userspace to switch to a stricter memory model

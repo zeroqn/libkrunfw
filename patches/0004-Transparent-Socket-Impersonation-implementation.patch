@@ -1,7 +1,7 @@
-From 65c66f21cc03632d004fd25f97bd8e43f70ee37a Mon Sep 17 00:00:00 2001
+From 01f2e89318269246e1ec143f0616f7b6c377166d Mon Sep 17 00:00:00 2001
 From: Sergio Lopez <slp@redhat.com>
 Date: Thu, 19 May 2022 22:38:26 +0200
-Subject: [PATCH 04/23] Transparent Socket Impersonation implementation
+Subject: [PATCH 04/22] Transparent Socket Impersonation implementation
 
 Transparent Socket Impersonation (AF_TSI) is an address family that
 provides sockets presenting two simultaneous personalities, one of
@@ -42,7 +42,7 @@ Signed-off-by: Matej Hrica <mhrica@redhat.com>
  create mode 100644 net/tsi/af_tsi.h
 
 diff --git a/include/linux/socket.h b/include/linux/socket.h
-index 2a8d7b14f..643e6519a 100644
+index 5a5eb1250..80e913a13 100644
 --- a/include/linux/socket.h
 +++ b/include/linux/socket.h
 @@ -254,8 +254,11 @@ struct ucred {
@@ -90,7 +90,7 @@ index 5b2dd7f07..f7b26fb55 100644
  obj-$(CONFIG_NET_SHAPER)	+= shaper/
 +obj-$(CONFIG_TSI)		+= tsi/
 diff --git a/net/socket.c b/net/socket.c
-index 63c69a0fa..c300e56af 100644
+index c05d86e63..26360c68b 100644
 --- a/net/socket.c
 +++ b/net/socket.c
 @@ -220,6 +220,9 @@ static const char * const pf_family_names[] = {
@@ -1823,10 +1823,10 @@ index 000000000..b74966fd7
 +
 +#endif
 diff --git a/security/selinux/hooks.c b/security/selinux/hooks.c
-index 18dd28b2b..4518767fb 100644
+index 30776b010..7c709af80 100644
 --- a/security/selinux/hooks.c
 +++ b/security/selinux/hooks.c
-@@ -1318,7 +1318,13 @@ static inline u16 socket_type_to_security_class(int family, int type, int protoc
+@@ -1327,7 +1327,13 @@ static inline u16 socket_type_to_security_class(int family, int type, int protoc
  			return SECCLASS_XDP_SOCKET;
  		case PF_MCTP:
  			return SECCLASS_MCTP_SOCKET;

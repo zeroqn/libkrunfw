@@ -1,7 +1,7 @@
-From 222a7df360e34a38aa27c36be809b1d0922426ee Mon Sep 17 00:00:00 2001
+From 7aeef10aedb79ee20de3a448cc5d65055b59d836 Mon Sep 17 00:00:00 2001
 From: cang fork <cang@localhost>
 Date: Mon, 28 Sep 2026 23:15:20 +0800
-Subject: [PATCH 23/23] drm/virtio: gate the guest-blob PRIME import on the
+Subject: [PATCH 22/22] drm/virtio: gate the guest-blob PRIME import on the
  negotiated bits blobs, never deref a NULL fpriv
 
 Fork-authored, not upstream.  `df4dc947c46b` unlocked the PRIME import for
@@ -29,10 +29,10 @@ index 1c76e5f0e..26639ac1f 100644
  		value = vgdev->has_create_guest_handle ? 1 : 0;
  		break;
 diff --git a/drivers/gpu/drm/virtio/virtgpu_prime.c b/drivers/gpu/drm/virtio/virtgpu_prime.c
-index 278f4bac8..25339f0ca 100644
+index 4746956bb..d24242fe3 100644
 --- a/drivers/gpu/drm/virtio/virtgpu_prime.c
 +++ b/drivers/gpu/drm/virtio/virtgpu_prime.c
-@@ -230,7 +230,7 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
+@@ -232,7 +232,7 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
  	struct virtio_gpu_device *vgdev = dev->dev_private;
  	struct virtio_gpu_object_params params = { 0 };
  	struct dma_resv *resv = attach->dmabuf->resv;
@@ -41,7 +41,7 @@ index 278f4bac8..25339f0ca 100644
  	struct virtio_gpu_mem_entry *ents = NULL;
  	unsigned int nents;
  	int ret;
-@@ -251,11 +251,14 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
+@@ -253,11 +253,14 @@ static int virtgpu_dma_buf_init_obj(struct drm_device *dev,
  	if (ret)
  		goto err_import;
  
@@ -58,7 +58,7 @@ index 278f4bac8..25339f0ca 100644
  		/* No way for userspace to decide with this API, but most existing
  		 * use cases do require shareable handles on the host side */
  		params.blob_flags |= VIRTGPU_BLOB_FLAG_CREATE_GUEST_HANDLE;
-@@ -328,7 +331,17 @@ struct drm_gem_object *virtgpu_gem_prime_import(struct drm_device *dev,
+@@ -367,7 +370,17 @@ struct drm_gem_object *virtgpu_gem_prime_import(struct drm_device *dev,
  		}
  	}
  

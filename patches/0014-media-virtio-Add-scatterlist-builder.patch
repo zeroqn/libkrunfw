@@ -1,7 +1,7 @@
-From befa532ea3d19b669e6c69ce3008abe3b036303d Mon Sep 17 00:00:00 2001
+From 3f752f214ae515615ff6d44ce5a5edeffed7d8ca Mon Sep 17 00:00:00 2001
 From: Alexandre Courbot <gnurou@gmail.com>
 Date: Tue, 8 Sep 2026 10:48:24 +0200
-Subject: [PATCH 14/23] media: virtio: Add scatterlist builder
+Subject: [PATCH 14/22] media: virtio: Add scatterlist builder
 
 This patch adds the scatterlist builder, which is used to construct
 scatterlists for virtio commands from V4L2 structures.
