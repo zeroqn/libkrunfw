@@ -13,8 +13,6 @@ both bits were negotiated, and a NULL prime_import_file_priv no longer
 dereferences.
 
 ---
- drivers/gpu/drm/virtio/virtgpu_prime.c | 21 +++++++++++++++++----
- 1 file changed, 17 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/gpu/drm/virtio/virtgpu_prime.c b/drivers/gpu/drm/virtio/virtgpu_prime.c
 index 9e0ba175d..528dd1f06 100644
@@ -65,6 +63,3 @@ index 9e0ba175d..528dd1f06 100644
  		return drm_gem_prime_import(dev, buf);
  
  	bo = kzalloc(sizeof(*bo), GFP_KERNEL);
--- 
-2.54.0
-
