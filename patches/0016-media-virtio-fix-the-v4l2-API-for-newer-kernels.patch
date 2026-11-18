@@ -1,4 +1,4 @@
-From f73b167f4d3bcc0658647367428865d83548523a Mon Sep 17 00:00:00 2001
+From a6fe74e302f0a22b868c301f263812b4979dd8ad Mon Sep 17 00:00:00 2001
 From: Dorinda Bassey <dbassey@redhat.com>
 Date: Tue, 8 Sep 2026 10:51:22 +0200
 Subject: [PATCH 16/22] media: virtio: fix the v4l2 API for newer kernels

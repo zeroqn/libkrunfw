@@ -1,4 +1,4 @@
-From 7aeef10aedb79ee20de3a448cc5d65055b59d836 Mon Sep 17 00:00:00 2001
+From ae71f173ce826471a6298dd544a4271b90ce4e2e Mon Sep 17 00:00:00 2001
 From: cang fork <cang@localhost>
 Date: Mon, 28 Sep 2026 23:15:20 +0800
 Subject: [PATCH 22/22] drm/virtio: gate the guest-blob PRIME import on the

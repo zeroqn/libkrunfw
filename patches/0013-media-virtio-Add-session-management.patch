@@ -1,4 +1,4 @@
-From dc19959adb00f1d67553448ae21d6e10fe1c5527 Mon Sep 17 00:00:00 2001
+From b9f8e1a1a9001acca786ea01c0a71dcc0fe1b73e Mon Sep 17 00:00:00 2001
 From: Alexandre Courbot <gnurou@gmail.com>
 Date: Tue, 8 Sep 2026 10:44:39 +0200
 Subject: [PATCH 13/22] media: virtio: Add session management

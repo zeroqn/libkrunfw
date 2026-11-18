@@ -1,4 +1,4 @@
-From 89aba3b5134b46abadf566feadf154188babf06f Mon Sep 17 00:00:00 2001
+From b8f99f44bb19bc22c85690d5fc730b2e6c20fdbe Mon Sep 17 00:00:00 2001
 From: Val Packett <val@invisiblethingslab.com>
 Date: Mon, 28 Sep 2026 23:14:12 +0800
 Subject: [PATCH 19/22] drm/virtio: support CREATE_GUEST_HANDLE and

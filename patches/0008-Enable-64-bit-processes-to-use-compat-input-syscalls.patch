@@ -1,4 +1,4 @@
-From af5b5daaf46c7c4b1301dc0ecc8b4c2312e76a52 Mon Sep 17 00:00:00 2001
+From e6df47154b32dbcd85f67c50b8c3f3a2ea1ca641 Mon Sep 17 00:00:00 2001
 From: Sergio Lopez <slp@redhat.com>
 Date: Tue, 8 Oct 2024 11:24:25 +0200
 Subject: [PATCH 08/22] Enable 64 bit processes to use compat input syscalls
@@ -94,10 +94,10 @@ index 272248591..2cd48a280 100644
 +
  #endif /* _LINUX_PRCTL_H */
 diff --git a/kernel/sys.c b/kernel/sys.c
-index 6533fd5ed..4a596d404 100644
+index 5af7d054c..1c8637799 100644
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
-@@ -2928,6 +2928,21 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
+@@ -2931,6 +2931,21 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
  			return -EINVAL;
  		error = arch_prctl_mem_model_set(me, arg2);
  		break;
