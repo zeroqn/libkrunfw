@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y make gcc clang lld llvm bc bison flex elfutils python3-pyelftools curl patch libelf-dev
+        run: sudo apt-get update && sudo apt-get install -y make gcc clang lld llvm bc bison flex elfutils python3-pyelftools curl patch libelf-dev dwarves
 
       - name: Set up sccache
         uses: ./.github/actions/setup-sccache
